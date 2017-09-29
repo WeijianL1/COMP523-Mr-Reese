@@ -1,6 +1,6 @@
 require('dotenv').config();
 const stringifyObject = require('stringify-object');
-var Promise = require('promise');
+// var Promise = require('promise');
 var express = require('express');
 var request = require('request');
 var bodyParser = require('body-parser');
@@ -48,8 +48,8 @@ app.get('/webhook/', function (req, res) {
 app.post('/webhook/', function (req, res) {
     // console.log("url: "+process.env.WORKSPACE_URL);
     var context;
-    var workspace = process.env.WORKSPACE_ID || '<workspace-id>';
-    if (!workspace || workspace === '<workspace-id>') {
+    var workspace = process.env.WORKSPACE_ID;
+    if (!workspace) {
         console.log("conversation workspace not configured");
     return res.json({
       'output': {
@@ -57,8 +57,7 @@ app.post('/webhook/', function (req, res) {
       }
     });
   }
-
-//from broker code
+  //from broker code
     messaging_events = req.body.entry[0].messaging;
     for (i = 0; i < messaging_events.length; i++) {
         event = req.body.entry[0].messaging[i];
@@ -91,9 +90,9 @@ app.post('/webhook/', function (req, res) {
                   });
                   res.sendStatus(200);
                 }else{
-                context=data.context;
-                console.log("responseWords: "+responseWords);
-                sendMessage(sender,responseWords);
+                  context=data.context;
+                  console.log("responseWords: "+responseWords);
+                  sendMessage(sender,responseWords);
                   res.sendStatus(200);
                   }
               }
