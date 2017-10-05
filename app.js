@@ -77,7 +77,7 @@ app.post('/webhook/', function (req, res) {
             // Send the input to the conversation service
             conversation.message(payload, function(err, data) {
               if (err) {
-                console.log(err);
+                console.log("err:"+err);
                 // console.log("2: "+obj(err));
                 res.sendStatus(502);
               }
@@ -85,8 +85,9 @@ app.post('/webhook/', function (req, res) {
               	var updatedMsg=updateMessage(text,data);
               	updatedMsg.then(function(response){
               		sendMessage(sender,response.output.text.toString());
+              		res.sendStatus(200);
               	});
-              	res.sendStatus(200);
+              	
                 // var responseWords=data.output.text.toString();
                 // var intent=data.intents[0].intent;
                 // console.log("data: "+data+"---"+"intent: "+intent);
@@ -119,21 +120,28 @@ function updateMessage(input, cv_response) {
   	var intent='';
   	var entitesArray;
   	var responseText;
-  	if(typeof data.intents[0]!='undefined'){  //has an intent
-  		// console.log(typeof data.intents);
-  		intent=data.intents[0].intent;
+  	var responseChunck;
+  	var responseWords=cv_response.output.text.toString();
+  	if(typeof cv_response.intents[0]!='undefined'){  //has an intent
+  		intent=cv_response.intents[0].intent.toString();
   	}
   	if(intent==''||intent=='question'||responseWords==''){
-  		if(typeof data.entites[0]!='undefined'){//has entites
-  			var entitesArray=generateEntityArray(input);
-  			responseText=sendToDiscovery(input,'entity');
-  		}else{
-  		 	responseText = sendToDiscovery(input,'title');
-  			// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
-  		}
+  		responseChunck = sendToDiscovery(input,'title');
+  		// console.log(score);
+  		// console.log("discovery case");
+  		// if(typeof cv_response.entities[0]!='undefined'){//has entites
+  		// 	console.log("has entites");
+  		// 	var entitesArray=generateEntityArray(cv_response);
+  		// 	console.log(entitesArray);
+  		// 	responseText=sendToDiscovery(entitesArray,'entity');
+  		// }else{
+  		// 	console.log("no entites");
+  		//  	responseText = sendToDiscovery(input,'title');
+  		// 	// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
+  		// }
 
-  		responseText.then(function(responseText) {
-  		   cv_response.output.text = responseText;
+  		responseChunck.then(function(response) {
+  		   cv_response.output.text = response;
   		   resolve(cv_response);
   		});
   	}else{
