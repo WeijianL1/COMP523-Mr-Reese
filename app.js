@@ -83,7 +83,7 @@ app.post('/webhook/', function (req, res) {
               }
               else {
               	var updatedMsg=updateMessage(text,data);
-              	query.then(function(response){
+              	updatedMsg.then(function(response){
               		sendMessage(sender,response.output.text.toString());
               	});
               	res.sendStatus(200);
@@ -129,7 +129,7 @@ function updateMessage(input, cv_response) {
   			responseText=sendToDiscovery(input,'entity');
   		}else{
   		 	responseText = sendToDiscovery(input,'title');
-  		// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
+  			// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
   		}
 
   		responseText.then(function(responseText) {
