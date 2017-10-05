@@ -24,7 +24,7 @@ function sendEntities(conversationResponse) {
         if (error) {
           reject(error);
         } else {
-          resolve([data.results[0].title, data.results[0].text, data.results[0].url]);
+          resolve([data.results[0].title, data.results[0].text]);
         }
     });
   });

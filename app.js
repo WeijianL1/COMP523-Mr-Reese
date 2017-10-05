@@ -6,6 +6,8 @@ var request = require('request');
 var bodyParser = require('body-parser');
 var Conversation = require('watson-developer-cloud/conversation/v1'); // watson sdk
 var sendToDiscovery = require('./discovery');
+var sendEntities = require('./sendEntities');
+var generateEntityArray = require('./generateEntityArray.js');
 
 
 var app = express();
@@ -80,37 +82,63 @@ app.post('/webhook/', function (req, res) {
                 res.sendStatus(502);
               }
               else {
-                var responseWords=data.output.text.toString();
-                var intent=data.intents[0].intent;
+              	var updatedMsg=updateMessage(text,data);
+              	query.then(function(response){
+              		sendMessage(sender,response.output.text.toString());
+              	});
+              	res.sendStatus(200);
+                // var responseWords=data.output.text.toString();
+                // var intent=data.intents[0].intent;
                 // console.log("data: "+data+"---"+"intent: "+intent);
-                if(intent=='off-topic'||responseWords==''){
-                  var query = updateMessage(text, data);  
-                  query.then(function(response){
-                    sendMessage(sender,response.output.text.toString());
-                  });
-                  res.sendStatus(200);
-                }else{
-                  context=data.context;
-                  console.log("responseWords: "+responseWords);
-                  sendMessage(sender,responseWords);
-                  res.sendStatus(200);
-                  }
+                // var intent='';
+                // if(typeof data.intents[0]!='undefined'){  //has an intent
+                // 	// console.log(typeof data.intents);
+                // 	intent=data.intents[0].intent;
+                // }
+                
+                // if(intent==''||intent=='off-topic'||responseWords==''){
+                //   var query = updateMessage(text, data);  
+                //   query.then(function(response){
+                //     sendMessage(sender,response.output.text.toString());
+                //   });
+                //   res.sendStatus(200);
+                // }else{
+                //   context=data.context;
+                //   console.log("responseWords: "+responseWords);
+                //   sendMessage(sender,responseWords);
+                //   res.sendStatus(200);
+                //   }
               }
             });
         }
     }
-    // res.sendStatus(200);
 });
 
-// not in use for now
 function updateMessage(input, cv_response) {
   return new Promise(function(resolve, reject) {
-     var responseText = sendToDiscovery(input);
-     // console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
-      responseText.then(function(responseText) {
-        cv_response.output.text = responseText;
-        resolve(cv_response);
-      });
+  	var intent='';
+  	var entitesArray;
+  	var responseText;
+  	if(typeof data.intents[0]!='undefined'){  //has an intent
+  		// console.log(typeof data.intents);
+  		intent=data.intents[0].intent;
+  	}
+  	if(intent==''||intent=='question'||responseWords==''){
+  		if(typeof data.entites[0]!='undefined'){//has entites
+  			var entitesArray=generateEntityArray(input);
+  			responseText=sendToDiscovery(input,'entity');
+  		}else{
+  		 	responseText = sendToDiscovery(input,'title');
+  		// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
+  		}
+
+  		responseText.then(function(responseText) {
+  		   cv_response.output.text = responseText;
+  		   resolve(cv_response);
+  		});
+  	}else{
+  		resolve(cv_response);
+  	}
   });
 };
 
