@@ -1,3 +1,4 @@
+//using squash branch
 require('dotenv').config();
 const stringifyObject = require('stringify-object');
 // var Promise = require('promise');
