@@ -1,5 +1,3 @@
-//test pull request
-//test with branch
 require('dotenv').config();
 const stringifyObject = require('stringify-object');
 // var Promise = require('promise');
