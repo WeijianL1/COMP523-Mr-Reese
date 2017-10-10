@@ -22,7 +22,7 @@ function sendToDiscovery(query,type) {
       query: trueQuery // only querying the text field
     }, function(error, data) {
         if (error) {
-          reject(error);
+          resolve([error]);
         } else {
           if (typeof data.results[0] == 'undefined') {
             console.log("Query Title, no results");
@@ -38,7 +38,7 @@ function sendToDiscovery(query,type) {
                 query: query // only querying the text field
               },function(errorText,dataText){
                 if (errorText) {
-                  reject(errorText);
+                  resolve([errorText]);
                 } else {
                   if(typeof data.results[0] == 'undefined') {
                     console.log("Query Text, no results.");
