@@ -24,9 +24,9 @@ function sendToDiscovery(query,type) {
         if (error) {
           reject(error);
         } else {
-          if (data.results == null) {
-            console.log("Your call to Discovery was complete, but it didn't return a response. We will expand our database");
-            reject(error);
+          if (typeof data.results[0] == 'undefined') {
+            console.log("Query Title, no results");
+            resolve(["Your call to Discovery was complete, but it didn't return a response. We will expand our database"]);
           } else {
             // console.log("discovery_data: "+stringifyObject(data).replace("\n"," "));
             console.log("resolve: "+[data.results[0].title,data.results[0].text]);
@@ -40,9 +40,9 @@ function sendToDiscovery(query,type) {
                 if (errorText) {
                   reject(errorText);
                 } else {
-                  if(data.results == null) {
-                    console.log("Your call to Discovery was complete, but it didn't return a response. We will expand our database");
-                    reject(["Your call to Discovery was complete, but it didn't return a response. We will expand our database"]);
+                  if(typeof data.results[0] == 'undefined') {
+                    console.log("Query Text, no results.");
+                    resolve(["Your call to Discovery was complete, but it didn't return a response. We will expand our database"]);
                   }
                   else if(dataText.results[0].score<1.5){
                     var q=query.replace(/\s+/g, '+');
