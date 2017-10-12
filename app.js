@@ -8,7 +8,8 @@ var Conversation = require('watson-developer-cloud/conversation/v1'); // watson 
 var sendToDiscovery = require('./discovery');
 var sendEntities = require('./sendEntities');
 var generateEntityArray = require('./generateEntityArray.js');
-
+var last_query;
+var last_answer;
 
 var app = express();
 app.enable('trust proxy')
@@ -48,71 +49,94 @@ app.get('/webhook/', function (req, res) {
 
 // Incoming messages reach this end point //
 app.post('/webhook/', function (req, res) {
-    // console.log("url: "+process.env.WORKSPACE_URL);
-    var context;
-    var workspace = process.env.WORKSPACE_ID;
-    if (!workspace) {
-        console.log("conversation workspace not configured");
-    return res.json({
-      'output': {
-        'text': 'The app has not been configured with a <b>WORKSPACE_ID</b> environment variable. Please refer to the ' + '<a href="https://github.com/watson-developer-cloud/conversation-simple">README</a> documentation on how to set this variable. <br>' + 'Once a workspace has been defined the intents may be imported from ' + '<a href="https://github.com/watson-developer-cloud/conversation-simple/blob/master/training/car_workspace.json">here</a> in order to get a working application.'
-      }
-    });
+  //console.log("getting post from webhook.");
+  // console.log("url: "+process.env.WORKSPACE_URL);
+  var context;
+  var workspace = process.env.WORKSPACE_ID;
+  if (!workspace) {
+      console.log("conversation workspace not configured");
+  return res.json({
+    'output': {
+      'text': 'The app has not been configured with a <b>WORKSPACE_ID</b> environment variable. Please refer to the ' + '<a href="https://github.com/watson-developer-cloud/conversation-simple">README</a> documentation on how to set this variable. <br>' + 'Once a workspace has been defined the intents may be imported from ' + '<a href="https://github.com/watson-developer-cloud/conversation-simple/blob/master/training/car_workspace.json">here</a> in order to get a working application.'
+    }
+  });
   }
   //from broker code
-    messaging_events = req.body.entry[0].messaging;
-    for (i = 0; i < messaging_events.length; i++) {
-        event = req.body.entry[0].messaging[i];
-        sender = event.sender.id;
-        if (event.message && event.message.text) {
-            text = event.message.text;
-            var inputObj={'text':text};
-            var payload = {
-              workspace_id: workspace,
-              //context is for keep the progress of a conversation, I haven't figure it out
-              context: context||{},
-              input: inputObj,
-            };
-            console.log("payload: "+payload.input.text+"---"+payload.workspace_id);
-            // Send the input to the conversation service
-            conversation.message(payload, function(err, data) {
-              if (err) {
-                console.log("err:"+err);
-                // console.log("2: "+obj(err));
-                res.sendStatus(502);
-              }
-              else {
-              	var updatedMsg=updateMessage(text,data);
-              	updatedMsg.then(function(response){
-              		sendMessage(sender,response.output.text.toString());
-              		res.sendStatus(200);
-              	});
-              	
-                // var responseWords=data.output.text.toString();
-                // var intent=data.intents[0].intent;
-                // console.log("data: "+data+"---"+"intent: "+intent);
-                // var intent='';
-                // if(typeof data.intents[0]!='undefined'){  //has an intent
-                // 	// console.log(typeof data.intents);
-                // 	intent=data.intents[0].intent;
-                // }
-                
-                // if(intent==''||intent=='off-topic'||responseWords==''){
-                //   var query = updateMessage(text, data);  
-                //   query.then(function(response){
-                //     sendMessage(sender,response.output.text.toString());
-                //   });
-                //   res.sendStatus(200);
-                // }else{
-                //   context=data.context;
-                //   console.log("responseWords: "+responseWords);
-                //   sendMessage(sender,responseWords);
-                //   res.sendStatus(200);
-                //   }
-              }
-            });
+  messaging_events = req.body.entry[0].messaging;
+  for (i = 0; i < messaging_events.length; i++) {
+    event = req.body.entry[0].messaging[i];
+    sender = event.sender.id;
+    if (event.message && event.message.text) {
+      text = event.message.text;
+      last_query = text;
+      var inputObj={'text':text};
+      var payload = {
+        workspace_id: workspace,
+        //context is for keep the progress of a conversation, I haven't figure it out
+        context: context||{},
+        input: inputObj,
+      };
+      console.log("payload: "+payload.input.text+"---"+payload.workspace_id);
+      // Send the input to the conversation service
+      conversation.message(payload, function(err, data) {
+        if (err) {
+          console.log("err:"+err);
+          // console.log("2: "+obj(err));
+          res.sendStatus(502);
         }
+        else {
+        	var updatedMsg=updateMessage(text,data);
+        	updatedMsg.then(function(response){
+        		sendMessage(sender,response.output.text.toString());
+        		res.sendStatus(200);
+        	});
+        }
+      });
+    } else if(event.postback && event.postback.payload) {
+      console.log("Getting postback from webhook.");
+      if (event.postback.payload == "relevant") {
+        var relevance = 10;
+      } else if (event.postback.payload == "irrelevant") {
+        var relevance = 0;
+      } else {
+        console.log("payload value not recognized.");
+      }
+
+      var example = { 
+        document_id: last_answer, 
+        relevance: relevance 
+      };
+
+      var examples = [];
+      examples.push(example);
+
+      var dataString = { 
+        natural_language_query: last_query,
+        examples: examples
+      };
+
+      var options = {
+        url: 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID +'/collections/' + process.env.COLLECTION_ID + '/training_data?version=2017-09-01',
+        method: 'POST',
+        json: true,
+        body: dataString,
+        auth: {
+          'user': process.env.DISCOVERY_USERNAME,
+          'pass': process.env.DISCOVERY_PASSWORD
+        }
+      };
+
+      function callback(error, response, body) {
+        if (!error && response.statusCode == 200) {
+          console.log(body);
+        } else if (error){
+          console.log("Error: " + error);
+        }
+      }
+      request(options, callback);
+      console.log("sent feedback to discovery.");
     }
+  }
 });
 
 function updateMessage(input, cv_response) {
@@ -139,10 +163,11 @@ function updateMessage(input, cv_response) {
   		//  	responseText = sendToDiscovery(input,'title');
   		// 	// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
   		// }
-
   		responseChunck.then(function(response) {
-  		   cv_response.output.text = response;
-  		   resolve(cv_response);
+  		  cv_response.output.text = response[0];
+        last_answer = response[1]
+  		  resolve(cv_response);
+        sendButton(sender);
   		});
   	}else{
   		resolve(cv_response);
@@ -150,34 +175,72 @@ function updateMessage(input, cv_response) {
   });
 };
 
+function sendButton(sender) {
+  var button1 = {
+    type: "postback",
+    title: "Relevant",
+    payload: "relevant"
+  };
+  var button2 = {
+    type: "postback",
+    title: "Not Relevant",
+    payload: "irrelevant"
+  };
+  var button_payload = {
+    template_type: "button",
+    text: "Could you please rate our responce regarding its relevance to your question?",
+    buttons: [button1, button2]
+  };
+  
+  var attachment_obj = {
+    type: "template",
+    payload: button_payload
+  };
+      
+  request({
+    url: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: {access_token: token},
+    method: 'POST',
+    json: {
+      recipient: {id: sender},
+      message: {attachment: attachment_obj},
+    }
+  }, function (error, response, body) {
+    if (error) {
+      console.log('Error sending button: ', error);
+    } else if (response.body.error) {
+      console.log('Error in button: ', response.body.error);
+    }
+  });
+  console.log("fbid: "+sender+"---"+"BUTTON");
+};
+
 // This function receives the response text and sends it back to the user //
 function sendMessage(sender,txt) {
     messageData = {
-        text: txt
+      text: txt
     }
       var numMsg=txt.length/600+1;
-      for(var i=0;i<numMsg;i++){
+      for(var i=0;i<1;i++){
         if(i==numMsg-1){var msg=txt.slice(i*600);}
         else{var msg=txt.slice(i*600,i*600+600);}
         request({
-            url: 'https://graph.facebook.com/v2.6/me/messages',
-            qs: {access_token: token},
-            method: 'POST',
-            json: {
-                recipient: {id: sender},
-                message: {text:msg},
-            }
+          url: 'https://graph.facebook.com/v2.6/me/messages',
+          qs: {access_token: token},
+          method: 'POST',
+          json: {
+            recipient: {id: sender},
+            message: {text:msg},
+          }
         }, function (error, response, body) {
-            if (error) {
-                console.log('Error sending message: ', error);
-            } else if (response.body.error) {
-                console.log('Error: ', response.body.error);
-            }
+          if (error) {
+            console.log('Error sending message: ', error);
+          } else if (response.body.error) {
+            console.log('Error in message: ', response.body.error);
+          }
         });
       }
-
     console.log("fbid: "+sender+"---"+"fb messageData: "+txt);
-
 };
 
 var token= process.env.FB_TOKEN;
