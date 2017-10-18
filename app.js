@@ -96,8 +96,10 @@ app.post('/webhook/', function (req, res) {
       console.log("Getting postback from webhook.");
       if (event.postback.payload == "relevant") {
         var relevance = 10;
+        sendMessage(sender,"Thanks for your feedback. I'm looking forward to see your again!");
       } else if (event.postback.payload == "irrelevant") {
         var relevance = 0;
+        sendMessage(sender,"I'm sorry that my answer does not solve your problem. Your feedback will help to improve my answer.");
       } else {
         console.log("payload value not recognized.");
       }
@@ -167,7 +169,9 @@ function updateMessage(input, cv_response) {
   		  cv_response.output.text = response[0];
         last_answer = response[1]
   		  resolve(cv_response);
-        sendButton(sender);
+        if(last_answer != 0) {
+          sendButton(sender);
+        }
   		});
   	}else{
   		resolve(cv_response);
@@ -188,7 +192,7 @@ function sendButton(sender) {
   };
   var button_payload = {
     template_type: "button",
-    text: "Could you please rate our responce regarding its relevance to your question?",
+    text: "Could you please rate my response regarding its relevance to your question?",
     buttons: [button1, button2]
   };
   
@@ -217,30 +221,30 @@ function sendButton(sender) {
 
 // This function receives the response text and sends it back to the user //
 function sendMessage(sender,txt) {
-    messageData = {
-      text: txt
-    }
-      var numMsg=txt.length/600+1;
-      for(var i=0;i<1;i++){
-        if(i==numMsg-1){var msg=txt.slice(i*600);}
-        else{var msg=txt.slice(i*600,i*600+600);}
-        request({
-          url: 'https://graph.facebook.com/v2.6/me/messages',
-          qs: {access_token: token},
-          method: 'POST',
-          json: {
-            recipient: {id: sender},
-            message: {text:msg},
-          }
-        }, function (error, response, body) {
-          if (error) {
-            console.log('Error sending message: ', error);
-          } else if (response.body.error) {
-            console.log('Error in message: ', response.body.error);
-          }
-        });
+  messageData = {
+    text: txt
+  }
+  var numMsg=txt.length/600+1;
+  for(var i=0;i<1;i++){
+    if(i==numMsg-1){var msg=txt.slice(i*600);}
+    else{var msg=txt.slice(i*600,i*600+600);}
+    request({
+      url: 'https://graph.facebook.com/v2.6/me/messages',
+      qs: {access_token: token},
+      method: 'POST',
+      json: {
+        recipient: {id: sender},
+        message: {text:msg},
       }
-    console.log("fbid: "+sender+"---"+"fb messageData: "+txt);
+    }, function (error, response, body) {
+      if (error) {
+        console.log('Error sending message: ', error);
+      } else if (response.body.error) {
+        console.log('Error in message: ', response.body.error);
+      }
+    });
+  }
+  console.log("fbid: "+sender+"---"+"fb messageData: "+txt);
 };
 
 var token= process.env.FB_TOKEN;

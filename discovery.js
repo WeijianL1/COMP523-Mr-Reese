@@ -42,21 +42,21 @@ function sendToDiscovery(query,type) {
                 } else {
                   if(typeof data.results[0] == 'undefined') {
                     console.log("Query Text, no results.");
-                    resolve(["Your call to Discovery was complete, but it didn't return a response. We will expand our database"]);
+                    resolve(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0]);
                   }
                   else if(dataText.results[0].score<1.5){
                     var q=query.replace(/\s+/g, '+');
                     var google="I am so sorry my friend. I am not smart enough yet for that question. Here's the last thing I can do for you: https://www.google.com/search?q="+q;
-                    resolve([google]);
+                    resolve([google, 0]);
                   }
                   else{
-                    resolve([data.results[0].title+'\n'+data.results[0].text]);
+                    resolve([data.results[0].title+'\n'+data.results[0].text, data.results[0].id]);
                   }
                 }
               });
             }
             else{
-            resolve([data.results[0].title+'\n'+data.results[0].text]);
+              resolve([data.results[0].title+'\n'+data.results[0].text, data.results[0].id]);
             }
           }
         }
