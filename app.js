@@ -8,8 +8,19 @@ var Conversation = require('watson-developer-cloud/conversation/v1'); // watson 
 var sendToDiscovery = require('./discovery');
 var sendEntities = require('./sendEntities');
 var generateEntityArray = require('./generateEntityArray.js');
+var mysql= require('mysql');
 var last_query;
 var last_answer;
+var last_answer_id;
+var dbAnswerId;
+
+var connection = mysql.createConnection({
+  host     : process.env.DB_HOST,
+  user     : process.env.DB_USERNAME,
+  password : process.env.DB_PASSWORD,
+  database : process.env.DB
+});
+connection.connect();
 
 var app = express();
 app.enable('trust proxy')
@@ -61,13 +72,19 @@ app.post('/webhook/', function (req, res) {
     }
   });
   }
-  //from broker code
+  //facebook endpoint
   messaging_events = req.body.entry[0].messaging;
   for (i = 0; i < messaging_events.length; i++) {
     event = req.body.entry[0].messaging[i];
     sender = event.sender.id;
-    if (event.message && event.message.text) {
+    if(event.message&&event.message.attachments){
+      var attachment_failure="Sorry, I am still blind:( Hope my creator would give me eyes soon"
+      sendMessage(sender,attachment_failure);
+      res.sendStatus(200);
+    }
+    else if (event.message && event.message.text) {
       text = event.message.text;
+      text = text.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g,' ');
       last_query = text;
       var inputObj={'text':text};
       var payload = {
@@ -96,16 +113,18 @@ app.post('/webhook/', function (req, res) {
       console.log("Getting postback from webhook.");
       if (event.postback.payload == "relevant") {
         var relevance = 10;
+        insertQnA(connection,last_answer,last_query,1,sender);
         sendMessage(sender,"Thanks for your feedback. I'm looking forward to see your again!");
       } else if (event.postback.payload == "irrelevant") {
         var relevance = 0;
+        insertQnA(connection,last_answer,last_query,1,sender);
         sendMessage(sender,"I'm sorry that my answer does not solve your problem. Your feedback will help to improve my answer.");
       } else {
         console.log("payload value not recognized.");
       }
 
       var example = { 
-        document_id: last_answer, 
+        document_id: last_answer_id, 
         relevance: relevance 
       };
 
@@ -141,6 +160,29 @@ app.post('/webhook/', function (req, res) {
   }
 });
 
+function insertQnA(connection,lA,lQ,success,senderId){
+    connection.query('INSERT INTO answers (answer_content) VALUE ("'+lA+'")', function (error, results, fields) {
+      if (error) {throw error;
+      console.log('The solution is: ', results[0].solution);}
+      else{
+        dbAnswerId=results.insertId;
+        console.log('The id is: '+dbAnswerId);
+        var query='INSERT INTO qna (question_content,answer_id,success,user_id) VALUE ("'+lQ+'",'+dbAnswerId+','+success+','+senderId+')';
+        connection.query(query, function (error, results, fields) {
+          if (error) {
+            console.log('The Q is: '+query);
+            console.log('The solution is: '+results[0].solution);
+            throw error;
+        }
+          else{
+            console.log('insert done');
+          }
+        });
+      }
+    });
+};
+
+
 function updateMessage(input, cv_response) {
   return new Promise(function(resolve, reject) {
   	var intent='';
@@ -167,9 +209,10 @@ function updateMessage(input, cv_response) {
   		// }
   		responseChunck.then(function(response) {
   		  cv_response.output.text = response[0];
-        last_answer = response[1]
+        last_answer = response[0];
+        last_answer_id = response[1];
   		  resolve(cv_response);
-        if(last_answer != 0) {
+        if(last_answer_id != 0) {
           sendButton(sender);
         }
   		});
