@@ -4,17 +4,20 @@ const stringifyObject = require('stringify-object');
 var express = require('express');
 var request = require('request');
 var bodyParser = require('body-parser');
-var schedule = require('node-schedule');
 var Conversation = require('watson-developer-cloud/conversation/v1'); // watson sdk
 var sendToDiscovery = require('./discovery');
 var sendEntities = require('./sendEntities');
+var addDocument = require('./addDocument');
 var generateEntityArray = require('./generateEntityArray.js');
+var schedule = require('node-schedule');
+var rssParser = require('rss-parser');
+var jsonfile = require('jsonfile');
+var fs = require('file-system');
 // var mysql= require('mysql');
 var last_query;
 var last_answer;
 var last_answer_id;
 var dbAnswerId;
-
 
 // var connection = mysql.createConnection({
 //   host     : process.env.DB_HOST,
@@ -50,22 +53,36 @@ var conversation = new Conversation({
   version_date: Conversation.VERSION_DATE_2017_04_21
 });
 
-var j = schedule.scheduleJob({hour: 22, minute: 20}, function(){
+// var rule = new schedule.RecurrenceRule();
+// rule.dayOfWeek = 0;
+// rule.hour = 1;
+// rule.minute = 7;
+ 
+var j = schedule.scheduleJob("10 0 * * *", function(){
+  console.log("Doing scheduled job.");
   updateNewsWithRSS();
 });
 
 
-// function updateNewsWithRSS() {
-//   $.get("http://www.starnewsonline.com/news/local?template=rss&mime=xml", function (data) {
-//     $(data).find("item").each(function () { // or "item" or whatever suits your feed
-//       var el = $(this);
-//       console.log("------------------------");
-//       console.log("title      : " + el.find("title").text());
-//       console.log("link     : " + el.find("link").text());
-//       console.log("description: " + el.find("description").text());
-//     });
-// });
-// }  
+
+function updateNewsWithRSS() {
+  rssParser.parseURL('http://www.starnewsonline.com/news/local?template=rss&mime=xml', function(err, parsed) {
+    console.log(parsed.feed.title);
+    var id = 0;
+    parsed.feed.entries.forEach(function(entry) {
+      console.log(entry.title + ':' + entry.link);
+      var news_obj = {
+        "title": entry.title,
+        "url": entry.link,
+        // description: entry.description
+      };
+      addDocument(news_obj);
+      console.log("writefile success!");
+      
+    });
+  });
+
+}; 
 
 // This code is called only when subscribing the webhook //
 app.get('/webhook/', function (req, res) {
