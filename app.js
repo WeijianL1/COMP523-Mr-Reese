@@ -205,23 +205,28 @@ app.post('/webhook/', function (req, res) {
 
 function insertQnA(connection,lA,lQ,success,senderId){
 	pool.getConnection(function(err, connection) {
-		var query1='INSERT INTO answers (answer_content) SELECT "'+lA+'" FROM DUAL WHERE NOT EXISTS (SELECT * FROM answers WHERE answer_content="'+lA+'") LIMIT 1';
+		// var query1='INSERT INTO answers (answer_content) SELECT "'+lA+'" FROM DUAL WHERE NOT EXISTS (SELECT * FROM answers WHERE answer_content="'+lA+'") LIMIT 1';
 		connection.query('INSERT INTO answers (answer_content) SELECT "'+lA+'" FROM DUAL WHERE NOT EXISTS (SELECT * FROM answers WHERE answer_content="'+lA+'") LIMIT 1', function (error, results, fields) {
 		if (error){console.log("answer: "+error.code+results[0].solution);
-		console.log("query1: "+query1);
-		}
+			}
 		else{
-			dbAnswerId=results.insertId;
-			console.log('The id is: '+dbAnswerId);
-			var query='INSERT INTO qna (question_content,answer_id,success,user_id) VALUE ("'+lQ+'",'+dbAnswerId+','+success+','+senderId+')';
-			connection.query(query, function (error, results, fields) {
-				if (error){console.log("QnA:"+error.code+results[0].solution);}
-				else{
-					console.log('insert done');
+			connection.query('SELECT id as id FROM answers where answer_content="'+lA+'"', function (error, results, fields) {
+			if (error){console.log("answer2: "+error.code+results[0].solution);
 				}
-			});
+			else{
+				dbAnswerId=results[0].id;
+				console.log('The id is: '+dbAnswerId);
+				var query='INSERT INTO qna (question_content,answer_id,success,user_id) VALUE ("'+lQ+'",'+dbAnswerId+','+success+','+senderId+')';
+				connection.query(query, function (error, results, fields) {
+					if (error){console.log("QnA:"+error.code+results[0].solution);}
+					else{
+						console.log('insert done');
+					}
+				});
 			}
 			});
+		}
+	});
 		connection.release();
 	  	});
 	  	
