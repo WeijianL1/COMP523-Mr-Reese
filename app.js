@@ -64,7 +64,7 @@ var conversation = new Conversation({
 // rule.hour = 1;
 // rule.minute = 7;
  
-var j = schedule.scheduleJob("10 0 * * *", function(){
+var j = schedule.scheduleJob("10 12 * * *", function(){
   console.log("Doing scheduled job.");
   updateNewsWithRSS();
 });
