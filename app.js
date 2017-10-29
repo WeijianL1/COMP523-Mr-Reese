@@ -122,6 +122,7 @@ app.post('/webhook/', function (req, res) {
       var attachment_failure="Sorry, I am still blind:( Hope my creator would give me eyes soon"
       sendMessage(sender,attachment_failure);
       res.sendStatus(200);
+      break;
     }
     else if (event.message && event.message.text) {
       text = event.message.text;
@@ -150,6 +151,7 @@ app.post('/webhook/', function (req, res) {
         	});
         }
       });
+      break;
     } else if(event.postback && event.postback.payload) {
       console.log("Getting postback from webhook.");
       if (event.postback.payload == "relevant") {
@@ -198,6 +200,7 @@ app.post('/webhook/', function (req, res) {
       request(options, callback);
       console.log("sent feedback to discovery.");
       event.postback.payload=null;
+      break;
     }
   }
   // insertQnA(connection,last_answer,last_query,successFlag,sender);

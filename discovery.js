@@ -25,7 +25,7 @@ function sendToDiscovery(query,type) {
       if (error) {
         resolve([error]);
       } else {
-        if (typeof data.results[0] == 'undefined' || data.results[0].score < 3) {
+        if (typeof data.results[0] == 'undefined' || data.results[0].score < 1.5) {
           discovery.query({
             environment_id: environment_id,
             collection_id: collection_id,
@@ -40,7 +40,7 @@ function sendToDiscovery(query,type) {
               } else {
                 // console.log("discovery_data: "+stringifyObject(data).replace("\n"," "));
                 console.log("resolve in spreadsheet: "+[data.results[0].title,data.results[0].text]);
-                if(data.results[0].score<3){
+                if(data.results[0].score<1.5){
                   trueQuery='text:'+query;
                   discovery.query({
                     environment_id: environment_id,
