@@ -69,8 +69,6 @@ var j = schedule.scheduleJob("10 12 * * *", function(){
   updateNewsWithRSS();
 });
 
-
-
 function updateNewsWithRSS() {
   rssParser.parseURL('http://www.starnewsonline.com/news/local?template=rss&mime=xml', function(err, parsed) {
     console.log(parsed.feed.title);
