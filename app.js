@@ -18,7 +18,7 @@ var last_query;
 var last_answer;
 var last_answer_id;
 var dbAnswerId;
-var successFlag;
+var postbackFlag=false;
 
 var connection = mysql.createConnection({
   host     : process.env.DB_HOST,
@@ -125,7 +125,6 @@ app.post('/webhook/', function (req, res) {
     else if (event.message && event.message.text) {
       text = event.message.text;
       text = text.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g,' ');
-      last_query = text;
       var inputObj={'text':text};
       var payload = {
         workspace_id: workspace,
@@ -149,8 +148,9 @@ app.post('/webhook/', function (req, res) {
         	});
         }
       });
+      postbackFlag=true;
       break;
-    } else if(event.postback && event.postback.payload) {
+    } else if(event.postback && event.postback.payload&& postbackFlag) {
       console.log("Getting postback from webhook.");
       if (event.postback.payload == "relevant") {
         var relevance = 10;
@@ -158,7 +158,7 @@ app.post('/webhook/', function (req, res) {
         sendMessage(sender,"Thanks for your feedback. I'm looking forward to see your again!");
       } else if (event.postback.payload == "irrelevant") {
         var relevance = 0;
-        insertQnA(connection,last_answer,last_query,0,sender);
+        insertQnA(connection,'0',last_query,0,sender);
         sendMessage(sender,"I'm sorry that my answer does not solve your problem. Your feedback will help to improve my answer.");
       } else {
         console.log("payload value not recognized.");
@@ -198,6 +198,7 @@ app.post('/webhook/', function (req, res) {
       request(options, callback);
       console.log("sent feedback to discovery.");
       event.postback.payload=null;
+      postbackFlag=false;
       break;
     }
   }
@@ -245,6 +246,7 @@ function updateMessage(input, cv_response) {
   		intent=cv_response.intents[0].intent.toString();
   	}
   	if(intent==''||intent=='question'||responseWords==''){
+  		last_query=input;
   		responseChunck = sendToDiscovery(input,'title');
   		// console.log(score);
   		// console.log("discovery case");
@@ -268,6 +270,7 @@ function updateMessage(input, cv_response) {
         }
   		});
   	}else{
+  		last_query=null;
   		resolve(cv_response);
   	}
   });
