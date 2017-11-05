@@ -112,7 +112,7 @@ function sendToDiscovery(query,type) {
                       //resolve([data.results[0].title+'\n'+data.results[0].text, data.results[0].id]);
                     }
                   }
-                  resolve(resolve_results(news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id));
+                  //resolve(resolve_results(news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id));
                 });
               }
               else{
@@ -125,43 +125,44 @@ function sendToDiscovery(query,type) {
               }
             }
           }
-          resolve(resolve_results(news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id));
+          resolve(resolve_results(query, news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id));
         });
       }
-    });
-
-
-
-    
+    });    
   });
 }
 
-function resolve_results(news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id) {
+function resolve_results(query, news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id) {
   console.log("news_score: "+news_score);
   console.log("spreadsheet_score: " + spreadsheet_score);
   if (spreadsheet_score == 0 && news_score == 0) {
-    return(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0]);
+    return(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0, -1]);
   }
   else if (news_score < 0.5 && spreadsheet_score < 1.0) {
     var q=query.replace(/\s+/g, '+');
     var google = "I am so sorry my friend. I am not smart enough yet for that question. Here's the last thing I can do for you: https://www.google.com/search?q="+q;
-    return([google, 0]);
+    return([google, 0, -1]);
   }
   else if (news_score > 1.5) {
-    return(["This is what I found for you." + '\n' + news_title + '\n' + news_url, news_id]);
+    return(["This is what I found for you." + '\n' + news_title + '\n' + news_url, news_id, 1]);
   } 
   else if (spreadsheet_score > 3) {
-    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id]);
+    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0]);
   }
   
   // From now on, either news_score >= 0.5 or spreadsheet_score >= 1.0/
   else if (news_score > spreadsheet_score / 2) {
-    return(["This is what I found for you." + '\n' + news_title + '\n' + news_url, news_id]);
+    return(["This is what I found for you." + '\n' + news_title + '\n' + news_url, news_id, 1]);
   } 
   else {
-    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id]);
+    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0]);
   }
 
 }
 
+function getNews() {
+
+}
+
 module.exports = sendToDiscovery;
+module.exports = getNews;
