@@ -5,18 +5,23 @@ var express = require('express');
 var request = require('request');
 var bodyParser = require('body-parser');
 var Conversation = require('watson-developer-cloud/conversation/v1'); // watson sdk
-var sendToDiscovery = require('./discovery');
+var discovery_export = require('./discovery');
+var sendToDiscovery = discovery_export.sendToDiscovery;
+var getNews = discovery_export.getNews;
+var getWeather = require('./weather');
 var sendEntities = require('./sendEntities');
 var addDocument = require('./addDocument');
 var generateEntityArray = require('./generateEntityArray.js');
 var schedule = require('node-schedule');
 var rssParser = require('rss-parser');
 var jsonfile = require('jsonfile');
+var assert = require('assert');
 var fs = require('file-system');
 var mysql= require('mysql');
 var last_query;
 var last_answer;
 var last_answer_id;
+var is_from_news;
 var dbAnswerId;
 var postbackFlag=false;
 
@@ -64,7 +69,7 @@ var conversation = new Conversation({
 // rule.hour = 1;
 // rule.minute = 7;
  
-var j = schedule.scheduleJob("10 12 * * *", function(){
+var j = schedule.scheduleJob("25 18 * * *", function(){
   console.log("Doing scheduled job.");
   updateNewsWithRSS();
 });
@@ -75,17 +80,17 @@ function updateNewsWithRSS() {
     var id = 0;
     parsed.feed.entries.forEach(function(entry) {
       console.log(entry.title + ':' + entry.link);
+      console.log(entry.description);
       var news_obj = {
         "title": entry.title,
         "url": entry.link,
-        // description: entry.description
+        //"description": entry.description
       };
       addDocument(news_obj);
       console.log("writefile success!");
       
     });
   });
-
 }; 
 
 // This code is called only when subscribing the webhook //
@@ -176,9 +181,19 @@ app.post('/webhook/', function (req, res) {
         natural_language_query: last_query,
         examples: examples
       };
-
+      if (is_from_news == 1) {
+        var url = 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID +'/collections/' + process.env.NEWS_COLLECTION_ID + '/training_data?version=2017-09-01';
+      }
+      else if (is_from_news == 0) {
+        var url = 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID +'/collections/' + process.env.COLLECTION_ID + '/training_data?version=2017-09-01';
+      }
+      else {
+        console.log("is_from_news should never be -1!");
+        assert.equal(is_from_news, -1);
+        assert.equal(1, 0);
+      }
       var options = {
-        url: 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID +'/collections/' + process.env.COLLECTION_ID + '/training_data?version=2017-09-01',
+        url: url,
         method: 'POST',
         json: true,
         body: dataString,
@@ -246,6 +261,7 @@ function updateMessage(input, cv_response) {
   		intent=cv_response.intents[0].intent.toString();
   	}
   	if(intent==''||intent=='question'||responseWords==''){
+      console.log("question intent.")
   		last_query=input;
   		responseChunck = sendToDiscovery(input,'title');
   		// console.log(score);
@@ -264,12 +280,29 @@ function updateMessage(input, cv_response) {
   		  cv_response.output.text = response[0];
         last_answer = response[0];
         last_answer_id = response[1];
+        is_from_news = response[2]
   		  resolve(cv_response);
         if(last_answer_id != 0) {
           sendFeedbackButton(sender);
         }
   		});
-  	}else{
+    } 
+    else if (intent=='weather') {
+      responseChunck = getWeather();
+      responseChunck.then(function(response) {
+        cv_response.output.text = response[0];
+        resolve(cv_response);
+      });
+    }
+    else if (intent=='news') {
+      responseChunck = getNews();
+      responseChunck.then(function(response) {
+        cv_response.output.text = response[0];
+        resolve(cv_response);
+      });
+  	} 
+    else{
+      console.log("Other intents.")
   		last_query=null;
   		resolve(cv_response);
   	}
