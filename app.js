@@ -8,9 +8,10 @@ var Conversation = require('watson-developer-cloud/conversation/v1'); // watson 
 var discovery_export = require('./discovery');
 var sendToDiscovery = discovery_export.sendToDiscovery;
 var getNews = discovery_export.getNews;
+var addDocument = discovery_export.addDocument;
 var getWeather = require('./weather');
 var sendEntities = require('./sendEntities');
-var addDocument = require('./addDocument');
+//var addDocument = require('./addDocument');
 var generateEntityArray = require('./generateEntityArray.js');
 var schedule = require('node-schedule');
 var rssParser = require('rss-parser');
@@ -69,26 +70,25 @@ var conversation = new Conversation({
 // rule.hour = 1;
 // rule.minute = 7;
  
-var j = schedule.scheduleJob("25 18 * * *", function(){
+var j = schedule.scheduleJob("46 23 * * *", function(){
   console.log("Doing scheduled job.");
   updateNewsWithRSS();
 });
 
 function updateNewsWithRSS() {
   rssParser.parseURL('http://www.starnewsonline.com/news/local?template=rss&mime=xml', function(err, parsed) {
-    console.log(parsed.feed.title);
+    //console.log(parsed.feed.title);
     var id = 0;
     parsed.feed.entries.forEach(function(entry) {
-      console.log(entry.title + ':' + entry.link);
-      console.log(entry.description);
+      //console.log(entry.title + ':' + entry.link);
+      //console.log(entry.description);
       var news_obj = {
         "title": entry.title,
         "url": entry.link,
+        "pubDate": entry.pubDate
         //"description": entry.description
       };
-      addDocument(news_obj);
-      console.log("writefile success!");
-      
+      addDocument(news_obj);      
     });
   });
 }; 
@@ -154,8 +154,10 @@ app.post('/webhook/', function (req, res) {
         }
       });
       postbackFlag=true;
+      event.postback=false;
       break;
     } else if(event.postback && event.postback.payload&& postbackFlag) {
+      postbackFlag=false;
       console.log("Getting postback from webhook.");
       if (event.postback.payload == "relevant") {
         var relevance = 10;
@@ -213,7 +215,7 @@ app.post('/webhook/', function (req, res) {
       request(options, callback);
       console.log("sent feedback to discovery.");
       event.postback.payload=null;
-      postbackFlag=false;
+      //postbackFlag=false;
       break;
     }
   }
