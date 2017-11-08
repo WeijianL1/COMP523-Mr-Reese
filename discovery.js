@@ -1,4 +1,6 @@
 const stringifyObject = require('stringify-object');
+//var dateFormat = require('dateformat');
+
 function sendToDiscovery(query,type) {
   console.log("discovery_query: "+query);
   return new Promise(function(resolve, reject) {
@@ -52,6 +54,171 @@ function sendToDiscovery(query,type) {
   });
 }
 
+function addDocument(json_obj) {
+  var DiscoveryV1 = require('watson-developer-cloud/discovery/v1');
+  var fs = require('file-system');
+  var discovery = new DiscoveryV1({
+    username: process.env.DISCOVERY_USERNAME,
+    password: process.env.DISCOVERY_PASSWORD,
+    version_date: '2017-10-16'
+  });
+  var document_obj = {
+    environment_id: process.env.ENVIRONMENT_ID,
+    collection_id: process.env.NEWS_COLLECTION_ID,
+    file: json_obj
+  };
+
+  trueQuery = json_obj.title;
+  var news_title_response = queryDiscovery(discovery, process.env.ENVIRONMENT_ID, process.env.NEWS_COLLECTION_ID, trueQuery, true);
+  news_title_response.then(function(response) {
+    console.log("query news returned.");
+    news_score = response[0];
+    news_pubDate = response[4];
+    console.log("pubDate: " + news_pubDate);
+    // news_title = response[1];
+    // news_url = response[2];
+    // news_id = response[3];
+    if (news_score > 2.5) {
+      console.log("Skipped addJsonDocument: " + json_obj.title);
+    } else {
+      console.log("New json found: " + json_obj.title);
+      discovery.addJsonDocument(document_obj, function(error, data) {
+        if (error) {
+          console.error(error);
+          return;
+        }
+        console.log(data);
+      });
+      
+    }
+  });
+}
+
+function getNews() {
+  console.log("getNews called.");
+  return new Promise(function(resolve, reject) {
+    var DiscoveryV1 = require('watson-developer-cloud/discovery/v1');
+    var discovery = new DiscoveryV1({
+      username: process.env.DISCOVERY_USERNAME,
+      password: process.env.DISCOVERY_PASSWORD,
+      version_date: '2017-06-25'
+    });
+    var environment_id = process.env.ENVIRONMENT_ID;
+    var news_collection_id = process.env.NEWS_COLLECTION_ID;
+    var now = new Date();
+    var date_str = now.toGMTString().substring(0, 16);
+    console.log("date_str: " + date_str);
+
+    news_arr = new Array(3);
+    var response_today = queryDiscoveryForThree(discovery, environment_id, news_collection_id, date_str);
+    response_today.then(function(response) {
+      var i = 0;
+      while (i < 3) {
+        var score_today = response[i].score;
+        if (score_today < 0.8) {
+          break;
+        } else {
+          news_arr[i] = response[i].url;
+          i++;
+        }
+      }
+      var i_rep = i;
+      if (i < 3) {
+        now.setDate(now.getDate() - 1);
+        var yesterday_date_str = now.toGMTString().substring(0, 16);
+        var response_yesterday = queryDiscoveryForThree(discovery, environment_id, news_collection_id, yesterday_date_str);
+        response_yesterday.then(function(response) {
+          while (i < 3) {
+            var score_yesterday = response[i - i_rep].score;
+            if (score_yesterday < 0.8) {
+              break;
+            } else {
+              news_arr[i] = response[i - i_rep].url;
+              i++;
+            }
+          }
+          resolve(["Here are today's stories from StarNews: " + news_arr[0] + "\n" + news_arr[1] + "\n" + news_arr[2]]);
+        });
+      } else {
+        resolve(["Here are today's stories from StarNews: " + news_arr[0] + "\n" + news_arr[1] + "\n" + news_arr[2]]);
+      }      
+    });
+    //var date_str = dateFormat(now.toGMTString());
+  });
+}
+
+function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQuery) {
+  trueQuery = trueQuery.replace(/:/g, ",");
+  //trueQuery = trueQuery.replace(/(?<=\d),(?=\d)/g, "");
+  //trueQuery = trueQuery.replace(/""/g, " ");
+  console.log("trueQuery: " + trueQuery);
+  
+  var makeObj = function(result){
+    res =  {
+      "score": result.score,
+      "title": result.title,
+      "url": result.url,
+      "pubDate": result.pubDate
+    };
+    return res;
+  }
+
+  var makeDummyObj = function(){
+    res = {
+      "score": 0,
+      "title": null,
+      "url": null,
+      "pubDate": null
+    };
+    return res;
+  };
+
+  return new Promise(function(resolve, reject) {
+    discovery.query({
+      environment_id: environment_id,
+      collection_id: collection_id,
+      query: trueQuery // only querying the text field
+    }, function(error, data) {
+      if (error) {
+        var obj_1 = makeDummyObj();
+        var obj_2 = makeDummyObj();
+        var obj_3 = makeDummyObj();
+        resolve([obj_1, obj_2, obj_3]);
+        //resolve([0, null, null, null, null]);
+      } else {
+        if (typeof data.results[0] == 'undefined') {
+          console.log("Query returns no results.");
+          // var score = 0;
+          // var title = null;
+          // var url_or_text = null;
+          // var id = null;
+          // var pubDate = null;
+          var obj_1 = makeDummyObj();
+          var obj_2 = makeDummyObj();
+          var obj_3 = makeDummyObj();
+        } 
+        else {
+          // var score = data.results[0].score;
+          // var title = data.results[0].title;
+          // if (is_news) {
+          //   var url_or_text = data.results[0].url;
+          // } else {
+          //   var url_or_text = data.results[0].text;
+          // }
+          // var id = data.results[0].id;
+          // var pubDate = data.results[0].pubDate;
+          var obj_1 = makeObj(data.results[0]);
+          var obj_2 = makeObj(data.results[1]);
+          var obj_3 = makeObj(data.results[2]);
+          console.log("Found results in news: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
+          //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
+        }
+        resolve([obj_1, obj_2, obj_3]);
+      }
+    });   
+  });
+}
+
 function queryDiscovery(discovery, environment_id, collection_id, trueQuery, is_news) {
   trueQuery = trueQuery.replace(/:/g, ",");
   //trueQuery = trueQuery.replace(/(?<=\d),(?=\d)/g, "");
@@ -93,7 +260,6 @@ function queryDiscovery(discovery, environment_id, collection_id, trueQuery, is_
   });
 }
 
-
 function resolve_results(query, news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id) {
   console.log("news_score: "+news_score);
   console.log("spreadsheet_score: " + spreadsheet_score);
@@ -119,64 +285,6 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
   else {
     return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0]);
   }
-}
-
-function addDocument(json_obj) {
-  var DiscoveryV1 = require('watson-developer-cloud/discovery/v1');
-  var fs = require('file-system');
-  var discovery = new DiscoveryV1({
-    username: process.env.DISCOVERY_USERNAME,
-    password: process.env.DISCOVERY_PASSWORD,
-    version_date: '2017-10-16'
-  });
-  var document_obj = {
-    environment_id: process.env.ENVIRONMENT_ID,
-    collection_id: process.env.NEWS_COLLECTION_ID,
-    file: json_obj
-  };
-
-  trueQuery = json_obj.title;
-  var news_title_response = queryDiscovery(discovery, process.env.ENVIRONMENT_ID, process.env.NEWS_COLLECTION_ID, trueQuery, true);
-  news_title_response.then(function(response) {
-    console.log("query news returned.");
-    news_score = response[0];
-    news_pubDate = response[4];
-    console.log("pubDate: " + news_pubDate);
-    // news_title = response[1];
-    // news_url = response[2];
-    // news_id = response[3];
-    if (news_score > 2.5) {
-      console.log("Skipped addJsonDocument: " + json_obj.title);
-    } else {
-      console.log("New json found: " + json_obj.title);
-      discovery.addJsonDocument(document_obj, function(error, data) {
-        if (error) {
-          console.error(error);
-          return;
-        }
-        console.log(data);
-      });
-      
-    }
-  });
-  
-
-}
-
-function getNews() {
-  console.log("getNews called.");
-  return new Promise(function(resolve, reject) {
-    var DiscoveryV1 = require('watson-developer-cloud/discovery/v1');
-    var discovery = new DiscoveryV1({
-      username: process.env.DISCOVERY_USERNAME,
-      password: process.env.DISCOVERY_PASSWORD,
-      version_date: '2017-06-25'
-    });
-    var environment_id = process.env.ENVIRONMENT_ID;
-    var collection_id = process.env.COLLECTION_ID;
-    var news_collection_id = process.env.NEWS_COLLECTION_ID;
-    var latest_news_collection_id = process.env.LATEST_NEWS_COLLECTION_ID;
-  });
 }
 
 module.exports = {
