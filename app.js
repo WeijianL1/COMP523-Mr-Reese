@@ -24,7 +24,7 @@ var last_answer;
 var last_answer_id;
 var is_from_news;
 var dbAnswerId;
-var postbackFlag=false;
+// var postbackFlag=false;
 
 var connection = mysql.createConnection({
   host     : process.env.DB_HOST,
@@ -70,7 +70,7 @@ var conversation = new Conversation({
 // rule.hour = 1;
 // rule.minute = 7;
  
-var j = schedule.scheduleJob("46 23 * * *", function(){
+var j = schedule.scheduleJob("24 2 * * *", function(){
   console.log("Doing scheduled job.");
   updateNewsWithRSS();
 });
@@ -95,7 +95,7 @@ function updateNewsWithRSS() {
 
 // This code is called only when subscribing the webhook //
 app.get('/webhook/', function (req, res) {
-    if (req.query['hub.verify_token'] === 'fb_weather_bot_verify_token') {
+    if (req.query['hub.verify_token']) {
         res.send(req.query['hub.challenge']);
         console.log("webhook got");
     }
@@ -118,14 +118,27 @@ app.post('/webhook/', function (req, res) {
   }
   //facebook endpoint
   messaging_events = req.body.entry[0].messaging;
+
   for (i = 0; i < messaging_events.length; i++) {
     event = req.body.entry[0].messaging[i];
     sender = event.sender.id;
-    if(event.message&&event.message.attachments){
-      var attachment_failure="Sorry, I am still blind:( Hope my creator would give me eyes soon"
+
+    if(event.message&&event.message.attachments&&event.message.attachments[0].type=='location'){
+      var lat=event.message.attachments[0].payload.coordinates.lat;
+      var long=event.message.attachments[0].payload.coordinates.long;
+      console.log("lat: ",lat,"long: ",long);
+
+      var responseChunck = getWeather(lat,long);
+      responseChunck.then(function(response) {
+        var weather_text = response[0];
+        sendMessage(sender,weather_text);
+      });
+      res.sendStatus(200);
+    }
+    else if(event.message&&event.message.attachments){
+      var attachment_failure="Sorry, I cannot handle that yet.";
       sendMessage(sender,attachment_failure);
       res.sendStatus(200);
-      break;
     }
     else if (event.message && event.message.text) {
       text = event.message.text;
@@ -148,16 +161,18 @@ app.post('/webhook/', function (req, res) {
         else {
         	var updatedMsg=updateMessage(text,data);
         	updatedMsg.then(function(response){
+            if(response.output.text.toString()!=""){
         		sendMessage(sender,response.output.text.toString());
+            }
         		res.sendStatus(200);
         	});
         }
       });
-      postbackFlag=true;
-      event.postback=false;
-      break;
-    } else if(event.postback && event.postback.payload&& postbackFlag) {
-      postbackFlag=false;
+      // postbackFlag=true;
+      // event.postback=false;
+      
+    } else if(event.postback && event.postback.payload) {
+      // postbackFlag=false;
       console.log("Getting postback from webhook.");
       if (event.postback.payload == "relevant") {
         var relevance = 10;
@@ -214,12 +229,9 @@ app.post('/webhook/', function (req, res) {
       }
       request(options, callback);
       console.log("sent feedback to discovery.");
-      event.postback.payload=null;
-      //postbackFlag=false;
-      break;
+      res.sendStatus(200);
     }
   }
-  // insertQnA(connection,last_answer,last_query,successFlag,sender);
 });
 
 function insertQnA(connection,lA,lQ,success,senderId){
@@ -290,11 +302,9 @@ function updateMessage(input, cv_response) {
   		});
     } 
     else if (intent=='weather') {
-      responseChunck = getWeather();
-      responseChunck.then(function(response) {
-        cv_response.output.text = response[0];
-        resolve(cv_response);
-      });
+      sendLocationRequest();
+      cv_response.output.text = "";//set text to empty, so that it wont go thru send message
+      resolve(cv_response);
     }
     else if (intent=='news') {
       responseChunck = getNews();
@@ -310,6 +320,36 @@ function updateMessage(input, cv_response) {
   	}
   });
 };
+
+
+function sendLocationRequest(){
+  var msg_payload={
+    text: "Please send your location: ",
+    quick_replies:[
+      {
+      "content_type":"location"
+      }
+    ]
+  };
+  request({
+    url: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: {access_token: token},
+    method: 'POST',
+    json: {
+      recipient: {id: sender},
+      message: msg_payload,
+    }
+  }, function (error, response, body) {
+    if (error) {
+      console.log('Error sending message: ', error);
+    } else if (response.body.error) {
+      console.log('Error in message: ', response.body.error);
+    }else{
+      console.log('location quick reply done');
+    }
+  });
+};
+
 
 function sendFeedbackButton(sender) {
   var button1 = {

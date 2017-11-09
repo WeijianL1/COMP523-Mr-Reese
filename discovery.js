@@ -118,7 +118,7 @@ function getNews() {
         if (score_today < 0.8) {
           break;
         } else {
-          news_arr[i] = response[i].url;
+          news_arr[i] = response[i].title+": "+response[i].url;
           i++;
         }
       }
@@ -133,14 +133,14 @@ function getNews() {
             if (score_yesterday < 0.8) {
               break;
             } else {
-              news_arr[i] = response[i - i_rep].url;
+              news_arr[i] = response[i - i_rep].title+": "+ response[i - i_rep].url;
               i++;
             }
           }
-          resolve(["Here are today's stories from StarNews: " + news_arr[0] + "\n" + news_arr[1] + "\n" + news_arr[2]]);
+          resolve(["Here are today's stories from StarNews: \n\n" + news_arr[0] + "\n\n" + news_arr[1] + "\n\n" + news_arr[2]]);
         });
       } else {
-        resolve(["Here are today's stories from StarNews: " + news_arr[0] + "\n" + news_arr[1] + "\n" + news_arr[2]]);
+        resolve(["Here are today's stories from StarNews: \n\n" + news_arr[0] + "\n\n" + news_arr[1] + "\n\n" + news_arr[2]]);
       }      
     });
     //var date_str = dateFormat(now.toGMTString());
@@ -193,9 +193,13 @@ function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQu
           // var url_or_text = null;
           // var id = null;
           // var pubDate = null;
+          var objs = new Array(3);
           var obj_1 = makeDummyObj();
           var obj_2 = makeDummyObj();
           var obj_3 = makeDummyObj();
+          objs[0] = obj_1;
+          objs[1] = obj_2;
+          objs[2] = obj_3;
         } 
         else {
           // var score = data.results[0].score;
@@ -207,13 +211,26 @@ function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQu
           // }
           // var id = data.results[0].id;
           // var pubDate = data.results[0].pubDate;
-          var obj_1 = makeObj(data.results[0]);
-          var obj_2 = makeObj(data.results[1]);
-          var obj_3 = makeObj(data.results[2]);
+          var objs = new Array(3);
+          for (var i=0; i<3;i++) {
+            if (typeof data.results[i] == 'undefined') {
+              objs[i] = makeDummyObj();
+            }
+            else {
+              objs[i] = makeObj(data.results[i]);
+            }
+          }
+          
+          // var obj_1 = makeObj(data.results[0]);
+          // var obj_2 = makeDummyObj();
+          // var obj_3 = makeDummyObj();
+          //var obj_2 = makeObj(data.results[1]);
+          //var obj_3 = makeObj(data.results[2]);
           console.log("Found results in news: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
           //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
         }
-        resolve([obj_1, obj_2, obj_3]);
+        resolve(objs);
+        //resolve([obj_1, obj_2, obj_3]);
       }
     });   
   });
