@@ -1,5 +1,8 @@
 const stringifyObject = require('stringify-object');
 //var dateFormat = require('dateformat');
+var queryNLP=require('./queryNLP');
+var queryNLP_url=queryNLP.queryNLP_url;
+var queryNLP_text=queryNLP.queryNLP_text;
 
 function sendToDiscovery(query,type) {
   console.log("discovery_query: "+query);
@@ -38,6 +41,7 @@ function sendToDiscovery(query,type) {
       news_title = response[1];
       news_url = response[2];
       news_id = response[3];
+      // var nlp_score=queryNLP(trueQuery,news_url);
       // if (news_score < 1) {
       //   news_desc_response = query(discovery, environment_id, news_collection_id, 'description:' + query)
       // }
@@ -45,10 +49,17 @@ function sendToDiscovery(query,type) {
       qna_q_response.then(function(response) {
         //console.log("query qna returned.");
         qna_score = response[0];
+        console.log("score before: ",qna_score);
         qna_title = response[1];
         qna_text = response[2];
         qna_id = response[3];
-        resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
+        qna_nlp_score.then(function(response){
+          console.log(response[0]);
+          qna_score +=response[0];
+          resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        });
+        
       });
     });
   });
@@ -283,7 +294,7 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
   if ((spreadsheet_score == 0 && news_score == 0)) {
     return(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0, -1]);
   }
-  else if (news_score < 0.5 && spreadsheet_score < 1.0) {
+  else if (news_score < 0.5 && spreadsheet_score < 1.5) {
     var q=query.replace(/\s+/g, '+');
     var google = "I am so sorry my friend. I am not smart enough yet for that question. Here's the last thing I can do for you: https://www.google.com/search?q="+q;
     return([google, 0, -1]);

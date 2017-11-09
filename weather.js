@@ -5,7 +5,7 @@ function getWeather(lat,long) {
   console.log("getWeather called!");
   return new Promise(function(resolve, reject) {
     var options = {
-      url: 'https://'+process.env.WEATHER_USERNAME +':' + process.env.WEATHER_PASSWORD + '@twcservice.mybluemix.net:443/api/weather/v1/geocode/'+lat+'/'+long+'/observations.json?units=m&language=en-US',
+      url: 'https://'+process.env.WEATHER_USERNAME +':' + process.env.WEATHER_PASSWORD + '@twcservice.mybluemix.net:443/api/weather/v1/geocode/'+lat+'/'+long+'/observations.json?units=e&language=en-US',
       method: 'GET',
     };
     console.log(options.url);
@@ -17,7 +17,7 @@ function getWeather(lat,long) {
         var temp = body_obj.observation.temp;
         var weather = body_obj.observation.wx_phrase;
         var loc=body_obj.observation.obs_name;
-        resolve(['Currently in '+loc+' it is ' + temp + " and " + weather + '.']);
+        resolve(['Currently in '+loc+', it is ' + temp + "\xB0F and " + weather + '.']);
       } else if (error){
         console.log("Weather Error: " + error);
         resolve([error]);
