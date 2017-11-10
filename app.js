@@ -70,7 +70,7 @@ var conversation = new Conversation({
 // rule.hour = 1;
 // rule.minute = 7;
  
-var j = schedule.scheduleJob("24 2 * * *", function(){
+var j = schedule.scheduleJob("15 20 * * *", function(){
   console.log("Doing scheduled job.");
   updateNewsWithRSS();
 });
