@@ -161,8 +161,12 @@ app.post('/webhook/', function (req, res) {
         else {
         	var updatedMsg=updateMessage(text,data);
         	updatedMsg.then(function(response){
-            if(response.output.text.toString()!=""){
-        		sendMessage(sender,response.output.text.toString());
+            if (response[0] && response[0] == "list") {
+              sendTemplateList(sender, response[1], response[2], response[3]);
+              //sendMessage(sender, "fuck");
+            }
+            else if(response.output.text.toString()!=""){
+          		sendMessage(sender,response.output.text.toString());
             }
         		res.sendStatus(200);
         	});
@@ -263,8 +267,8 @@ function insertQnA(connection,lA,lQ,success,senderId){
 	  	
 };
 
-
 function updateMessage(input, cv_response) {
+  console.log("updateMessage Called.");
   return new Promise(function(resolve, reject) {
   	var intent='';
   	var entitesArray;
@@ -296,8 +300,15 @@ function updateMessage(input, cv_response) {
         last_answer_id = response[1];
         is_from_news = response[2]
   		  resolve(cv_response);
+        if (is_from_news == 1 || true) {
+          console.log(is_from_news);
+          sendTemplate(sender, response[3], response[4]);
+        }
         if(last_answer_id != 0) {
-          sendFeedbackButton(sender);
+          setTimeout(function() {
+            sendFeedbackButton(sender);
+          }, 10000);
+          console.log("Waited 10 seconds.")
         }
   		});
     } 
@@ -309,8 +320,8 @@ function updateMessage(input, cv_response) {
     else if (intent=='news') {
       responseChunck = getNews();
       responseChunck.then(function(response) {
-        cv_response.output.text = response[0];
-        resolve(cv_response);
+        //cv_response.output.text = "skip";
+        resolve(["list", response[0], response[1], response[2]]);
       });
   	} 
     else{
@@ -389,6 +400,123 @@ function sendFeedbackButton(sender) {
     }
   });
   console.log("fbid: "+sender+"---"+"BUTTON");
+};
+
+function sendTemplate(sender, title, url) {
+  var element = {
+    title: title,
+    image_url: "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png",
+    default_action: {
+      type: "web_url",
+      url: url,
+      //messenger_extensions: true,
+      webview_height_ratio: "tall"
+    },
+    buttons: [{
+      type: "web_url",
+      url: url,
+      title: "View Article"
+    }]
+  };
+
+  var payloadData = {
+    template_type: "generic",
+    elements: [element]
+  };
+  var attachmentData = {
+    type: "template",
+    payload: payloadData
+  };
+  request({
+    url: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: {access_token: token},
+    method: 'POST',
+    json: {
+      recipient: {id: sender},
+      message: {attachment: attachmentData}
+      //message: {text: "fuck"}
+    }
+  }, function (error, response, body) {
+    if (error) {
+      console.log('Error sending message: ', error);
+    } else if (response.body.error) {
+      console.log('Error in message: ', response.body.error);
+    }
+  });
+  console.log("fbid: "+sender+"---"+"fb messageData: "+"fuck");
+};
+
+function sendTemplateList(sender, news1, news2, news3) {
+  var element1 = {
+    title: news1.title,
+    image_url: "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png",
+    // default_action: {
+    //   type: "web_url",
+    //   url: news1.url,
+    //   //messenger_extensions: true,
+    //   webview_height_ratio: "tall"
+    // },
+    buttons: [{
+      type: "web_url",
+      url: news1.url,
+      title: "View Article"
+    }]
+  };
+  var element2 = {
+    title: news2.title,
+    default_action: {
+      type: "web_url",
+      url: news2.url,
+      //messenger_extensions: true,
+      webview_height_ratio: "tall"
+    },
+    buttons: [{
+      type: "web_url",
+      url: news2.url,
+      title: "View Article"
+    }]
+  };
+  var element3 = {
+    title: news3.title,
+    default_action: {
+      type: "web_url",
+      url: news3.url,
+      //messenger_extensions: true,
+      webview_height_ratio: "tall"
+    },
+    buttons: [{
+      type: "web_url",
+      url: news3.url,
+      title: "View Article"
+    }]
+  };
+
+  var payloadData = {
+    template_type: "list",
+    top_element_style: "large",
+    elements: [element1, element2, element3]
+  };
+  var attachmentData = {
+    type: "template",
+    payload: payloadData
+  };
+  request({
+    url: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: {access_token: token},
+    method: 'POST',
+    json: {
+      recipient: {id: sender},
+      message: {attachment: attachmentData}
+      //message: {text: "fuck"}
+    }
+  }, function (error, response, body) {
+    if (error) {
+      console.log('Error sending message: ', error);
+    } else if (response.body.error) {
+      console.log('Error in message: ', response.body.error);
+    }
+  });
+  console.log("fbid: "+sender+"---"+"fb messageData: "+"fuck");
 };
 
 // This function receives the response text and sends it back to the user //

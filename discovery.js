@@ -53,12 +53,13 @@ function sendToDiscovery(query,type) {
         qna_title = response[1];
         qna_text = response[2];
         qna_id = response[3];
-        var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
-        qna_nlp_score.then(function(response){
-          console.log(response[0]);
-          qna_score +=response[0];
-          resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
-        });
+        resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        // var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
+        // qna_nlp_score.then(function(response){
+        //   console.log(response[0]);
+        //   qna_score +=response[0];
+        //   resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        // });
         
       });
     });
@@ -126,10 +127,11 @@ function getNews() {
       var i = 0;
       while (i < 3) {
         var score_today = response[i].score;
-        if (score_today < 0.8) {
+        if (score_today < 1.5) {
           break;
         } else {
-          news_arr[i] = response[i].title+": "+response[i].url;
+          news_arr[i] = response[i];
+          //news_arr[i] = response[i].title+": "+response[i].url;
           i++;
         }
       }
@@ -141,17 +143,20 @@ function getNews() {
         response_yesterday.then(function(response) {
           while (i < 3) {
             var score_yesterday = response[i - i_rep].score;
-            if (score_yesterday < 0.8) {
+            if (score_yesterday < 1.0) {
               break;
             } else {
-              news_arr[i] = response[i - i_rep].title+": "+ response[i - i_rep].url;
+              news_arr[i] = response[i - i_rep];
+              //news_arr[i] = response[i - i_rep].title+": "+ response[i - i_rep].url;
               i++;
             }
           }
-          resolve(["Here are today's stories from StarNews: \n\n" + news_arr[0] + "\n\n" + news_arr[1] + "\n\n" + news_arr[2]]);
+          resolve(news_arr);
+          //resolve(["Here are today's stories from StarNews: \n\n" + news_arr[0] + "\n\n" + news_arr[1] + "\n\n" + news_arr[2]]);
         });
       } else {
-        resolve(["Here are today's stories from StarNews: \n\n" + news_arr[0] + "\n\n" + news_arr[1] + "\n\n" + news_arr[2]]);
+        resolve(news_arr);
+        //resolve(["Here are today's stories from StarNews: \n\n" + news_arr[0] + "\n\n" + news_arr[1] + "\n\n" + news_arr[2]]);
       }      
     });
     //var date_str = dateFormat(now.toGMTString());
@@ -292,26 +297,26 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
   console.log("news_score: "+news_score);
   console.log("spreadsheet_score: " + spreadsheet_score);
   if ((spreadsheet_score == 0 && news_score == 0)) {
-    return(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0, -1]);
+    return(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0, -1, null, null]);
   }
   else if (news_score < 0.5 && spreadsheet_score < 1.5) {
     var q=query.replace(/\s+/g, '+');
     var google = "I am so sorry my friend. I am not smart enough yet for that question. Here's the last thing I can do for you: https://www.google.com/search?q="+q;
-    return([google, 0, -1]);
+    return([google, 0, -1, null, null]);
   }
   else if (news_score > 1.5) {
-    return(["This is what I found for you." + '\n' + news_title + '\n' + news_url, news_id, 1]);
+    return(["This is what I found for you.", 1, news_title, news_url]);
   } 
   else if (spreadsheet_score > 3) {
-    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0]);
+    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0, null, null]);
   }
   
   // From now on, either news_score >= 0.5 or spreadsheet_score >= 1.0/
   else if (news_score > spreadsheet_score / 2) {
-    return(["This is what I found for you." + '\n' + news_title + '\n' + news_url, news_id, 1]);
+    return(["This is what I found for you.", news_id, 1, news_title, news_url]);
   } 
   else {
-    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0]);
+    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0, null, null]);
   }
 }
 
