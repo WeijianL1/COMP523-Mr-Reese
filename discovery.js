@@ -305,7 +305,7 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
     return([google, 0, -1, null, null]);
   }
   else if (news_score > 1.5) {
-    return(["This is what I found for you.", 1, news_title, news_url]);
+    return(["This is what I found for you.", news_id,1, news_title, news_url]);
   } 
   else if (spreadsheet_score > 3) {
     return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0, null, null]);

@@ -295,6 +295,7 @@ function updateMessage(input, cv_response) {
   		// 	// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
   		// }
   		responseChunck.then(function(response) {
+        // var confidence="\n My confidence level is: ",parseFloat(response[5])/5.0*100,"%";
   		  cv_response.output.text = response[0];
         last_answer = response[0];
         last_answer_id = response[1];
@@ -307,8 +308,8 @@ function updateMessage(input, cv_response) {
         if(last_answer_id != 0) {
           setTimeout(function() {
             sendFeedbackButton(sender);
-          }, 10000);
-          console.log("Waited 10 seconds.")
+          }, 5000);
+          console.log("Waited 5 seconds.")
         }
   		});
     } 
