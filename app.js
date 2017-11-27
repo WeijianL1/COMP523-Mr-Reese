@@ -24,6 +24,37 @@ var last_answer;
 var last_answer_id;
 var is_from_news;
 var dbAnswerId;
+var url_dict_arr = [
+  {
+    category: "local",
+    url: 'http://www.starnewsonline.com/news/local?template=rss&mime=xml' 
+  },
+  // {
+  //   category: "politics",
+  //   url: 'http://www.starnewsonline.com/news/politics?template=rss&mime=xml' 
+  // },
+  {
+    category: "national-world",
+    url: 'http://www.starnewsonline.com/news/nation-world?template=rss&mime=xml' 
+  },
+  {
+    category: "sports",
+    url: 'http://www.starnewsonline.com/sports?template=rss&mime=xml' 
+  },
+  // {
+  //   category: "crime",
+  //   url: 'http://www.starnewsonline.com/news/crime?template=rss&mime=xml' 
+  // },
+
+  {
+    category: "entertainment",
+    url: 'http://www.starnewsonline.com/entertainment?template=rss&mime=xml'
+  },
+  {
+    category: "lifestyle",
+    url: 'http://www.starnewsonline.com/lifestyle?template=rss&mime=xml'
+  }
+];
 // var postbackFlag=false;
 
 var connection = mysql.createConnection({
@@ -64,32 +95,75 @@ var conversation = new Conversation({
   url:process.env.CONVERSATION_URL,
   version_date: Conversation.VERSION_DATE_2017_04_21
 });
-
-// var rule = new schedule.RecurrenceRule();
-// rule.dayOfWeek = 0;
-// rule.hour = 1;
-// rule.minute = 7;
  
-var j = schedule.scheduleJob("15 20 * * *", function(){
-  console.log("Doing scheduled job.");
-  updateNewsWithRSS();
-});
+// var j1 = schedule.scheduleJob("20 * * * *", function(){
+//   console.log("Doing scheduled job for local.");
+//   updateNewsWithRSS("local");
+// });
 
-function updateNewsWithRSS() {
-  rssParser.parseURL('http://www.starnewsonline.com/news/local?template=rss&mime=xml', function(err, parsed) {
+// var j2 = schedule.scheduleJob("25 * * * *", function(){
+//   console.log("Doing scheduled job for national.");
+//   updateNewsWithRSS("national-world");
+// });
+
+// var j3 = schedule.scheduleJob("30 * * * *", function(){
+//   console.log("Doing scheduled job for sports.");
+//   updateNewsWithRSS("sports");
+// });
+
+// var j4 = schedule.scheduleJob("35 * * * *", function(){
+//   console.log("Doing scheduled job for entertainment.");
+//   updateNewsWithRSS("entertainment");
+// });
+
+// var j5 = schedule.scheduleJob("40 * * * *", function(){
+//   console.log("Doing scheduled job for lifestyle.");
+//   updateNewsWithRSS("lifestyle");
+// });
+
+// var j = schedule.scheduleJob("*/5 * * * *", function(){
+//   console.log("Doing scheduled job.");
+//   updateNewsWithRSS();
+// });
+
+function parseURL(url, news_cat) {
+  rssParser.parseURL(url, function(err, parsed) {
     //console.log(parsed.feed.title);
     var id = 0;
     parsed.feed.entries.forEach(function(entry) {
       //console.log(entry.title + ':' + entry.link);
       //console.log(entry.description);
-      var news_obj = {
-        "title": entry.title,
-        "url": entry.link,
-        "pubDate": entry.pubDate
-        //"description": entry.description
-      };
-      addDocument(news_obj);      
+      request({
+        method:'GET',
+        url: entry.link
+      },function(err,response,body){
+        if(err) return console.log(err);
+        //console.log(body);
+        var html=body;
+        var news_obj = {
+          "title": entry.title,
+          "url": entry.link,
+          "pubDate": entry.pubDate,
+          "description": entry.content,
+          //"html": html,
+          "category": news_cat
+        };
+        addDocument(news_obj);      
+      });
+
     });
+  });
+};
+
+function updateNewsWithRSS(target_cat) {
+  url_dict_arr.forEach(function(element) {
+    var category = element.category;
+    var url = element.url;
+    console.log("category: " + category);
+    console.log("url: " + url);
+    if (category == target_cat) {
+      parseURL(url, category);
+    }
   });
 }; 
 
@@ -121,7 +195,7 @@ app.post('/webhook/', function (req, res) {
 
   for (i = 0; i < messaging_events.length; i++) {
     event = req.body.entry[0].messaging[i];
-    sender = event.sender.id;
+    var sender = event.sender.id;
 
     if(event.message&&event.message.attachments&&event.message.attachments[0].type=='location'){
       var lat=event.message.attachments[0].payload.coordinates.lat;
@@ -159,10 +233,10 @@ app.post('/webhook/', function (req, res) {
           res.sendStatus(502);
         }
         else {
-        	var updatedMsg=updateMessage(text,data);
+        	var updatedMsg=updateMessage(text, data, sender);
         	updatedMsg.then(function(response){
             if (response[0] && response[0] == "list") {
-              sendTemplateList(sender, response[1], response[2], response[3]);
+              sendTemplateList(sender, response[1], response[2], response[3], response[4], response[5]);
               //sendMessage(sender, "fuck");
             }
             else if(response.output.text.toString()!=""){
@@ -267,7 +341,7 @@ function insertQnA(connection,lA,lQ,success,senderId){
 	  	
 };
 
-function updateMessage(input, cv_response) {
+function updateMessage(input, cv_response, sender) {
   console.log("updateMessage Called.");
   return new Promise(function(resolve, reject) {
   	var intent='';
@@ -295,14 +369,16 @@ function updateMessage(input, cv_response) {
   		// 	// console.log("responseTExt: "+stringifyObject(responseText).replace('\n','--'));
   		// }
   		responseChunck.then(function(response) {
+        console.log("sendToDiscovery returned.");
         // var confidence="\n My confidence level is: ",parseFloat(response[5])/5.0*100,"%";
   		  cv_response.output.text = response[0];
         last_answer = response[0];
         last_answer_id = response[1];
-        is_from_news = response[2]
+        is_from_news = response[2];
+        console.log("answer_id:" + last_answer_id);
   		  resolve(cv_response);
         if (is_from_news == 1 || true) {
-          console.log(is_from_news);
+          console.log("is_from_news: " + is_from_news);
           sendTemplate(sender, response[3], response[4]);
         }
         if(last_answer_id != 0) {
@@ -319,10 +395,12 @@ function updateMessage(input, cv_response) {
       resolve(cv_response);
     }
     else if (intent=='news') {
+      console.log("detect news intent.");
       responseChunck = getNews();
       responseChunck.then(function(response) {
+        console.log("getNews returned.");
         //cv_response.output.text = "skip";
-        resolve(["list", response[0], response[1], response[2]]);
+        resolve(["list", response[0], response[1], response[2], response[3], response[4]]);
       });
   	} 
     else{
@@ -404,6 +482,7 @@ function sendFeedbackButton(sender) {
 };
 
 function sendTemplate(sender, title, url) {
+  console.log("sendTemplate called.");
   var element = {
     title: title,
     image_url: "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png",
@@ -428,6 +507,7 @@ function sendTemplate(sender, title, url) {
     type: "template",
     payload: payloadData
   };
+  console.log("before sending http request.");
   request({
     url: 'https://graph.facebook.com/v2.6/me/messages',
     qs: {access_token: token},
@@ -444,58 +524,55 @@ function sendTemplate(sender, title, url) {
       console.log('Error in message: ', response.body.error);
     }
   });
-  console.log("fbid: "+sender+"---"+"fb messageData: "+"fuck");
+  console.log("sendTemplate fbid: "+sender+"---"+"fb messageData: "+"fuck");
 };
 
-function sendTemplateList(sender, news1, news2, news3) {
+function sendTemplateList(sender, news1, news2, news3, news4, news5) {
+  var img_url = "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png";
   var element1 = {
     title: news1.title,
-    image_url: "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png",
-    // default_action: {
-    //   type: "web_url",
-    //   url: news1.url,
-    //   //messenger_extensions: true,
-    //   webview_height_ratio: "tall"
-    // },
+    image_url: img_url,
+    subtitle: news1.description,
+    default_action: {
+      type: "web_url",
+      url: news1.url,
+      //messenger_extensions: true,
+      webview_height_ratio: "tall"
+    },
     buttons: [{
       type: "web_url",
       url: news1.url,
-      title: "View Article"
+      title: news1.category
     }]
   };
-  var element2 = {
-    title: news2.title,
-    default_action: {
-      type: "web_url",
-      url: news2.url,
-      //messenger_extensions: true,
-      webview_height_ratio: "tall"
-    },
-    buttons: [{
-      type: "web_url",
-      url: news2.url,
-      title: "View Article"
-    }]
+  var makeElement = function(news) {
+    console.log("Category: " + news.category);
+    var element = {
+      title: news.title,
+      subtitle: news.description,
+      default_action: {
+        type: "web_url",
+        url: news.url,
+        //messenger_extensions: true,
+        webview_height_ratio: "tall"
+      },
+      buttons: [
+      {
+        type: "web_url",
+        url: news.url,
+        title: news.category
+      }]
+    };
+    return element;
   };
-  var element3 = {
-    title: news3.title,
-    default_action: {
-      type: "web_url",
-      url: news3.url,
-      //messenger_extensions: true,
-      webview_height_ratio: "tall"
-    },
-    buttons: [{
-      type: "web_url",
-      url: news3.url,
-      title: "View Article"
-    }]
-  };
-
+  var element2 = makeElement(news2);
+  var element3 = makeElement(news3);
+  var element4 = makeElement(news4);
+  var element5 = makeElement(news5);
   var payloadData = {
     template_type: "list",
     top_element_style: "large",
-    elements: [element1, element2, element3]
+    elements: [element1, element2, element3, element4]
   };
   var attachmentData = {
     type: "template",
