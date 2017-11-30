@@ -155,10 +155,12 @@ function queryNLP_text(user_input, title) {
                         user_semantic.forEach(function(curr_user_sem, user_index) {
                             // console.log("lengnth: ",curr_user_sem.length);
                             title_semantic.forEach(function(curr_title_sem, title_index) {
-                                var user_object = curr_user_sem.object.text;
-                                var user_verb = curr_user_sem.action.normalized;
-                                var title_object = curr_title_sem.object.text;
-                                var title_verb = curr_title_sem.action.normalized;
+                                var user_object = curr_user_sem&&curr_user_sem.object?curr_user_sem.object.text:"";
+                                var user_verb = curr_user_sem&&curr_user_sem.action?curr_user_sem.action.normalized:"";
+                                var title_object = curr_title_sem&&curr_title_sem.object?curr_title_sem.object.text:"";
+                                var title_verb = curr_title_sem&&curr_title_sem.action?curr_title_sem.action.normalized:"";
+                                // score_offset += similarity(user_object, title_object) * 1;
+                                // console.log("sim ", user_object, "---", title_object, "---", similarity(user_object, title_object), "---", score_offset);
                                 score_offset -= similarity(user_object, title_verb) * 1;
                                 console.log("sim ", user_object, "---", title_verb, "---", similarity(user_object, title_verb), "---", score_offset);
                                 score_offset -= similarity(user_verb, title_object) * 1;
@@ -174,7 +176,39 @@ function queryNLP_text(user_input, title) {
     });
 };
 
+function queryNLP_keywords(user_input){
+    return new Promise(function(resolve,reject){
+        var user_payload = { //set json paylaod for user input
+            'text': user_input,
+            'features': {
+                'keywords': {
+                    'emotion': true,
+                    'sentiment': true,
+                    'limit': 10
+                },
+            }
+        };
+        natural_language_understanding.analyze(user_payload, function(err, response) {
+            if (err) {
+                console.log('error:', err, "---user not analyzed");
+                resolve([""]);
+            } else {
+                var keywords_arr=[];
+                var user_keywords = response.keywords;
+                user_keywords.forEach(function(keyword){
+                    keywords_arr.push(keyword.text);
+                });
+                console.log(keywords_arr[0]);
+                var keywords_str=keywords_arr.join(",").toLowerCase();
+                 console.log(keywords_str);
+                resolve([keywords_str]);
+            }
+
+    });
+});
+}
 module.exports = {
     queryNLP_url: queryNLP_url,
-    queryNLP_text: queryNLP_text
+    queryNLP_text: queryNLP_text,
+    queryNLP_keywords: queryNLP_keywords
 };

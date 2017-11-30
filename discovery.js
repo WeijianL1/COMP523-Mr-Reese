@@ -53,13 +53,14 @@ function sendToDiscovery(query,type) {
         qna_title = response.title;
         qna_text = response.text;
         qna_id = response.id;
-        resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
-        // var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
-        // qna_nlp_score.then(function(response){
-        //   console.log(response[0]);
-        //   qna_score +=response[0];
-        //   resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
-        // });
+        // resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
+        qna_nlp_score.then(function(response){
+          console.log(response[0]);
+          qna_score +=response[0];
+          console.log("score after: ",qna_score);
+          resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        });
         
       });
     });
@@ -67,6 +68,7 @@ function sendToDiscovery(query,type) {
 }
 
 function addDocument(json_obj) {
+  console.log("hit addDocument");
   var DiscoveryV1 = require('watson-developer-cloud/discovery/v1');
   var fs = require('file-system');
   var discovery = new DiscoveryV1({
@@ -147,6 +149,7 @@ function getNewsOfCat(discovery, environment_id, collection_id, category) {
   return new Promise(function(resolve, reject) {
     
     var now = new Date();
+    var day_off=1;
     var date_str = now.toGMTString().substring(0, 16);
     console.log("date_str: " + date_str);
 
@@ -156,7 +159,7 @@ function getNewsOfCat(discovery, environment_id, collection_id, category) {
     var response_today = queryDiscovery(discovery, environment_id, collection_id, trueQuery, true);
     response_today.then(function(response) {
       if (response.score < 1.0) {
-        now.setDate(now.getDate() - 1);
+        now.setDate(now.getDate() - day_off);
         date_str = now.toGMTString().substring(0, 16);
         var trueQuery = 'pubDate:"' + date_str + '",category::"' + category + '"'; 
         var response_yesterday = queryDiscovery(discovery, environment_id, collection_id, trueQuery, true);
@@ -323,27 +326,61 @@ function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQu
 function resolve_results(query, news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id) {
   console.log("news_score: "+news_score);
   console.log("spreadsheet_score: " + spreadsheet_score);
+  var news_payload={
+    answer_txt:   "This is what I found for you.",
+    id:   news_id,
+    source:   "Star News",
+    title:  news_title,
+    url:  news_url,
+    score: news_score
+  };
+  var spreadsheet_payload={
+    answer_txt: spreadsheet_title+'\n'+spreadsheet_text,
+    id:   spreadsheet_id,
+    source:   "Spreadsheet",
+    title:  null,
+    url:  null,
+    score: spreadsheet_score
+  };
+
+  var fail_payload={
+    answer_txt:  "Your call to Discovery was complete, but it didn't return a response. We will expand our database" ,
+    id:   0,
+    source:   "Fail",
+    title:  null,
+    url:  null,
+    score: 0
+  };
+
   if ((spreadsheet_score == 0 && news_score == 0)) {
-    return(["Your call to Discovery was complete, but it didn't return a response. We will expand our database", 0, -1, null, null]);
+    return(fail_payload);
   }
   else if (news_score < 0.5 && spreadsheet_score < 1.5) {
     var q=query.replace(/\s+/g, '+');
     var google = "I am so sorry my friend. I am not smart enough yet for that question. Here's the last thing I can do for you: https://www.google.com/search?q="+q;
-    return([google, 0, -1, null, null]);
+    var google_payload={
+      answer_txt:  google ,
+      id:   0,
+      source:   "Google",
+      title:  null,
+      url:  null,
+      score:0
+    };
+    return(google_payload);
   }
   else if (news_score > 1.5) {
-    return(["This is what I found for you.", news_id,1, news_title, news_url]);
+    return(news_payload);
   } 
   else if (spreadsheet_score > 3) {
-    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0, null, null]);
+    return(spreadsheet_payload);
   }
   
   // From now on, either news_score >= 0.5 or spreadsheet_score >= 1.0/
   else if (news_score > spreadsheet_score / 2) {
-    return(["This is what I found for you.", news_id, 1, news_title, news_url]);
+    return(news_payload);
   } 
   else {
-    return([spreadsheet_title+'\n'+spreadsheet_text, spreadsheet_id, 0, null, null]);
+    return(spreadsheet_payload);
   }
 }
 
