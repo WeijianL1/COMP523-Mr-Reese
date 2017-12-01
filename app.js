@@ -244,6 +244,7 @@ app.post('/webhook/', function(req, res) {
                     // console.log("2: "+obj(err));
                     res.sendStatus(502);
                 } else {
+                    res.sendStatus(200);
                     var updatedMsg = updateMessage(text, data, sender);
                     updatedMsg.then(function(response) {
                         if (response[0] && response[0] == "list") {
@@ -252,7 +253,7 @@ app.post('/webhook/', function(req, res) {
                         } else if (response.output.text.toString() != "") {
                             sendMessage(sender, response.output.text.toString());
                         }
-                        res.sendStatus(200);
+                        
                     });
                 }
             });
@@ -504,15 +505,17 @@ function sendTemplate(sender, title, url) {
             console.log(err);
         } else {
         	var $ = cheerio.load(body.toString());
-        	var image_link=$('.image').children('img').attr('src').toString();
-        	var cut_idex=image_link.search("&");
-        	var image_link=image_link.slice(0,cut_idex+1)+"MaxH=500&MaxW=500";
+        	var image_link=$('.image').children('img').attr('src').toString()||"http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png";
+            if(image_link!="http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png"){
+        	   var cut_idex=image_link.search("&");
+        	   var image_link=image_link.slice(0,cut_idex+1)+"MaxH=500&MaxW=500";
+            }
 
-        	console.log(image_link);
+        	// console.log(image_link);
 
         	var element = {
         	    title: title,
-        	    image_url: image_link||"http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png",
+        	    image_url: image_link,
         	    default_action: {
         	        type: "web_url",
         	        url: url,

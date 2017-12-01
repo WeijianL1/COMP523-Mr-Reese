@@ -21,12 +21,12 @@ function queryNLP_url(user_input, url) {
                 'entities': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 },
                 'keywords': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 }
             }
         };
@@ -36,12 +36,12 @@ function queryNLP_url(user_input, url) {
                 'entities': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 },
                 'keywords': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 }
             }
         };
@@ -103,12 +103,12 @@ function queryNLP_text(user_input, title) {
                 'entities': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 },
                 'keywords': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 },
                 'semantic_roles': {}
             }
@@ -119,12 +119,12 @@ function queryNLP_text(user_input, title) {
                 'entities': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 },
                 'keywords': {
                     'emotion': true,
                     'sentiment': true,
-                    'limit': 5
+                    'limit': 3
                 },
                 'semantic_roles': {}
             }
