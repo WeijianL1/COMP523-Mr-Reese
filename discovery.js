@@ -53,14 +53,14 @@ function sendToDiscovery(query,type) {
         qna_title = response.title;
         qna_text = response.text;
         qna_id = response.id;
-        // resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
-        var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
-        qna_nlp_score.then(function(response){
-          console.log(response[0]);
-          qna_score +=response[0];
-          console.log("score after: ",qna_score);
-          resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
-        });
+        resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        // var qna_nlp_score=queryNLP_text(trueQuery,qna_title);
+        // qna_nlp_score.then(function(response){
+        //   console.log(response[0]);
+        //   qna_score +=response[0];
+        //   console.log("score after: ",qna_score);
+        //   resolve(resolve_results(query, news_score, news_title, news_url, news_id, qna_score, qna_title, qna_text, qna_id));
+        // });
         
       });
     });
