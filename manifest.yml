@@ -3,10 +3,11 @@ applications:
   memory: 256M
   instances: 1
   domain: mybluemix.net
-  name: Reese 
+  name: Reese #this will be your instance name
   host: Reese
   disk_quota: 1024M
   services: 
   - ReeseConv
   - DiscoveryReese
+#list all other service name you use here
 

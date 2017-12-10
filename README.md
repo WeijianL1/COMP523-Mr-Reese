@@ -12,6 +12,7 @@
 3. In Bluemix, [create a Natural Language Understanding instance](https://console.bluemix.net/catalog/services/natural-language-understanding)
 
 4. In Bluemix, [create a ClearDB Managed MySQL instance](https://console.bluemix.net/catalog/services/cleardb-managed-mysql-database)
+5. In Bluemix, create a Weather Company Data instance
 
 ###Set Up Conversation
 * Creat a Workspace 
@@ -32,10 +33,37 @@
 
 ###Deploy the server code to Bluemix
 * Fill out the .env file. 
-* 	replicate the .env.example and rename it to .env
-* 	
-* install cf
-* cf login
-* manifest
-* cf push
+  * replicate the .env.example and rename it to .env
+
+  * Conversation:![coversation_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/coversation_2.jpeg)
+
+  * Discovery: (for both collections)![discovery_3](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/discovery_3.jpeg)
+
+  * Weather: ![weather](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/weather.jpeg)
+
+  * NLP: ![nlp](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/nlp.jpeg)
+
+  * MySQL: ![db_1](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/db_1.jpeg)
+
+    ![db_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/db_2.jpeg)
+
+* [install cf command](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
+
+* In your terminal under the root directory of app.js:
+
+   ```
+   cf login
+   ```
+
+* Type in your IBM username and keywords
+
+* Adjust manifest.yml
+
+* In terminal:
+
+   ```
+   cf push
+   ```
+
+   ​
 
