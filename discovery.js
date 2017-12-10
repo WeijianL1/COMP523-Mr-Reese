@@ -3,6 +3,73 @@ const stringifyObject = require('stringify-object');
 var queryNLP=require('./queryNLP');
 var queryNLP_url=queryNLP.queryNLP_url;
 var queryNLP_text=queryNLP.queryNLP_text;
+var rssParser = require('rss-parser');
+var cheerio = require('cheerio');//for scrapper
+var url_dict_arr = [
+    {
+        category: "local",
+        url: 'http://www.starnewsonline.com/news/local?template=rss&mime=xml'
+    },
+    {
+        category: "national-world",
+        url: 'http://www.starnewsonline.com/news/nation-world?template=rss&mime=xml'
+    }, {
+        category: "sports",
+        url: 'http://www.starnewsonline.com/sports?template=rss&mime=xml'
+    },
+    {
+        category: "entertainment",
+        url: 'http://www.starnewsonline.com/entertainment?template=rss&mime=xml'
+    }, {
+        category: "lifestyle",
+        url: 'http://www.starnewsonline.com/lifestyle?template=rss&mime=xml'
+    }
+];
+
+function updateNewsWithRSS(target_cat) {
+    url_dict_arr.forEach(function(element) {
+        var category = element.category;
+        var url = element.url;
+        console.log("category: " + category);
+        console.log("url: " + url);
+        if (category == target_cat) {
+            parseURL(url, category);
+        }
+    });
+};
+
+function parseURL(url, news_cat) {
+    rssParser.parseURL(url, function(err, parsed) {
+        //console.log(parsed.feed.title);
+        var id = 0;
+        parsed.feed.entries.forEach(function(entry) {
+            //console.log(entry.title + ':' + entry.link);
+            //console.log(entry.description);
+            request({
+                method: 'GET',
+                url: entry.link
+            }, function(err, response, body) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    var $ = cheerio.load(body.toString());
+                    // var $ = cheerio.load('<ul class="article-body"><li class="inner">Apple</li><li class="orange">Orange</li><li class="pear">Pear</li></ul>');
+                    var html=$('.article-body').text();
+                    // console.log("html: ",html);
+                    var news_obj = {
+                        "title": entry.title,
+                        "url": entry.link,
+                        "pubDate": entry.pubDate,
+                        "description": entry.content,
+                        "html": html,
+                        "category": news_cat
+                    };
+                    addDocument(news_obj);
+                }
+            });
+        });
+    });
+};
 
 function sendToDiscovery(query,type) {
   console.log("discovery_query: "+query);
@@ -65,7 +132,7 @@ function sendToDiscovery(query,type) {
       });
     });
   });
-}
+};
 
 function addDocument(json_obj) {
   console.log("hit addDocument");
@@ -81,8 +148,8 @@ function addDocument(json_obj) {
     collection_id: process.env.NEWS_COLLECTION_ID,
     file: json_obj
   };
-
-  trueQuery = 'title:"' + json_obj.title + '",category::"' + json_obj.category + '"';
+//trueQuery = trueQuery.replace(/""/g, " ");
+  trueQuery = 'title:"' + json_obj.title.replace(/"/g, "'") + '",category::"' + json_obj.category + '"';
   var news_title_response = queryDiscovery(discovery, process.env.ENVIRONMENT_ID, process.env.NEWS_COLLECTION_ID, trueQuery, "Star News");
   news_title_response.then(function(response) {
     console.log("query news returned.");
@@ -92,7 +159,7 @@ function addDocument(json_obj) {
     // news_title = response[1];
     // news_url = response[2];
     // news_id = response[3];
-    if (news_score > 10) {
+    if (news_score > 15) {
       console.log("Skipped addJsonDocument: " + json_obj.title);
     } else {
       console.log("New json found: " + json_obj.title + ", score = " + news_score);
@@ -106,7 +173,7 @@ function addDocument(json_obj) {
       
     }
   });
-}
+};
 
 // function getWatsonNews(){
 //   return new Promise(function(resolve, reject) {
@@ -166,7 +233,7 @@ function getNews() {
       });
     });
   });
-}
+};
 
 function getNewsOfCat(discovery, environment_id, collection_id, category) {
   console.log("getNewsOfCat called with category: " + category);
@@ -193,8 +260,7 @@ function getNewsOfCat(discovery, environment_id, collection_id, category) {
       }
     });
   });
-}
-
+};
 
 function queryDiscovery(discovery, environment_id, collection_id, trueQuery, source) {
   //trueQuery = trueQuery.replace(/:/g, ",");
@@ -238,9 +304,7 @@ function queryDiscovery(discovery, environment_id, collection_id, trueQuery, sou
       }
     });   
   });
-}
-
-
+};
 
 function resolve_results(query, news_score, news_title, news_url, news_id, spreadsheet_score, spreadsheet_title, spreadsheet_text, spreadsheet_id) {
   console.log("news_score: "+news_score);
@@ -274,7 +338,7 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
   if ((spreadsheet_score == 0 && news_score == 0)) {
     return(fail_payload);
   }
-  else if (news_score < 0.5 && spreadsheet_score < 1.5) {
+  else if (news_score < 5 && spreadsheet_score < 5) {
     var q=query.replace(/\s+/g, '+');
     var google = "I am so sorry my friend. I am not smart enough yet for that question. Here's the last thing I can do for you: https://www.google.com/search?q="+q;
     var google_payload={
@@ -287,10 +351,10 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
     };
     return(google_payload);
   }
-  else if (news_score > 1.5) {
+  else if (news_score > 15) {
     return(news_payload);
   } 
-  else if (spreadsheet_score > 3) {
+  else if (spreadsheet_score > 20) {
     return(spreadsheet_payload);
   }
   
@@ -301,7 +365,7 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
   else {
     return(spreadsheet_payload);
   }
-}
+};
 
 var makeObj = function(result, source){
   var description = result.description || "NO SUBTITLE AVAILABLE";
@@ -335,7 +399,7 @@ var makeObj = function(result, source){
   }
   
   return res;
-}
+};
 
 var makeDummyObj = function(source){
   if (source == "Star News") {
@@ -360,73 +424,74 @@ var makeDummyObj = function(source){
   return res;
 };
 
-// function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQuery) {//deprecated
-//   trueQuery = trueQuery.replace(/:/g, ",");
-//   //trueQuery = trueQuery.replace(/(?<=\d),(?=\d)/g, "");
-//   //trueQuery = trueQuery.replace(/""/g, " ");
-//   console.log("trueQuery: " + trueQuery);
-//   return new Promise(function(resolve, reject) {
-//     discovery.query({
-//       environment_id: environment_id,
-//       collection_id: collection_id,
-//       query: trueQuery // only querying the text field
-//     }, function(error, data) {
-//       if (error) {
-//         var obj_1 = makeDummyObj();
-//         var obj_2 = makeDummyObj();
-//         var obj_3 = makeDummyObj();
-//         resolve([obj_1, obj_2, obj_3]);
-//         //resolve([0, null, null, null, null]);
-//       } else {
-//         if (typeof data.results[0] == 'undefined') {
-//           console.log("Query returns no results.");
-//           // var score = 0;
-//           // var title = null;
-//           // var url_or_text = null;
-//           // var id = null;
-//           // var pubDate = null;
-//           var objs = new Array(3);
-//           var obj_1 = makeDummyObj(true);
-//           var obj_2 = makeDummyObj(true);
-//           var obj_3 = makeDummyObj(true);
-//           objs[0] = obj_1;
-//           objs[1] = obj_2;
-//           objs[2] = obj_3;
-//         } 
-//         else {
-//           // var score = data.results[0].score;
-//           // var title = data.results[0].title;
-//           // if (is_news) {
-//           //   var url_or_text = data.results[0].url;
-//           // } else {
-//           //   var url_or_text = data.results[0].text;
-//           // }
-//           // var id = data.results[0].id;
-//           // var pubDate = data.results[0].pubDate;
-//           var objs = new Array(3);
-//           for (var i=0; i<3;i++) {
-//             if (typeof data.results[i] == 'undefined') {
-//               objs[i] = makeDummyObj(true);
-//             }
-//             else {
-//               objs[i] = makeObj(data.results[i], "Star News");
-//             }
-//           }
+function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQuery) {//deprecated
+  trueQuery = trueQuery.replace(/:/g, ",");
+  //trueQuery = trueQuery.replace(/(?<=\d),(?=\d)/g, "");
+  //trueQuery = trueQuery.replace(/""/g, " ");
+  console.log("trueQuery: " + trueQuery);
+  return new Promise(function(resolve, reject) {
+    discovery.query({
+      environment_id: environment_id,
+      collection_id: collection_id,
+      query: trueQuery // only querying the text field
+    }, function(error, data) {
+      if (error) {
+        var obj_1 = makeDummyObj();
+        var obj_2 = makeDummyObj();
+        var obj_3 = makeDummyObj();
+        resolve([obj_1, obj_2, obj_3]);
+        //resolve([0, null, null, null, null]);
+      } else {
+        if (typeof data.results[0] == 'undefined') {
+          console.log("Query returns no results.");
+          // var score = 0;
+          // var title = null;
+          // var url_or_text = null;
+          // var id = null;
+          // var pubDate = null;
+          var objs = new Array(3);
+          var obj_1 = makeDummyObj(true);
+          var obj_2 = makeDummyObj(true);
+          var obj_3 = makeDummyObj(true);
+          objs[0] = obj_1;
+          objs[1] = obj_2;
+          objs[2] = obj_3;
+        } 
+        else {
+          // var score = data.results[0].score;
+          // var title = data.results[0].title;
+          // if (is_news) {
+          //   var url_or_text = data.results[0].url;
+          // } else {
+          //   var url_or_text = data.results[0].text;
+          // }
+          // var id = data.results[0].id;
+          // var pubDate = data.results[0].pubDate;
+          var objs = new Array(3);
+          for (var i=0; i<3;i++) {
+            if (typeof data.results[i] == 'undefined') {
+              objs[i] = makeDummyObj(true);
+            }
+            else {
+              objs[i] = makeObj(data.results[i], "Star News");
+            }
+          }
           
-//           // var obj_1 = makeObj(data.results[0]);
-//           // var obj_2 = makeDummyObj();
-//           // var obj_3 = makeDummyObj();
-//           //var obj_2 = makeObj(data.results[1]);
-//           //var obj_3 = makeObj(data.results[2]);
-//           console.log("Found results in news: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
-//           //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
-//         }
-//         resolve(objs);
-//         //resolve([obj_1, obj_2, obj_3]);
-//       }
-//     });   
-//   });
-// }
+          // var obj_1 = makeObj(data.results[0]);
+          // var obj_2 = makeDummyObj();
+          // var obj_3 = makeDummyObj();
+          //var obj_2 = makeObj(data.results[1]);
+          //var obj_3 = makeObj(data.results[2]);
+          console.log("Found results in news: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
+          //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
+        }
+        resolve(objs);
+        //resolve([obj_1, obj_2, obj_3]);
+      }
+    });   
+  });
+};
+
 module.exports = {
   sendToDiscovery: sendToDiscovery,
   addDocument: addDocument,

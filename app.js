@@ -1,27 +1,26 @@
 require('dotenv').config();
-const stringifyObject = require('stringify-object');
-var cheerio = require('cheerio');//for scrapper
-// var Promise = require('promise');
 var express = require('express');
 var request = require('request');
 var bodyParser = require('body-parser');
 var Conversation = require('watson-developer-cloud/conversation/v1'); // watson sdk
 var discovery_export = require('./discovery');
-var sendToDiscovery = discovery_export.sendToDiscovery;
-var getNews = discovery_export.getNews;
-var addDocument = discovery_export.addDocument;
 var queryNLP=require('./queryNLP');
-var queryNLP_keywords=queryNLP.queryNLP_keywords;
 var getWeather = require('./weather');
 var sendEntities = require('./sendEntities');
-//var addDocument = require('./addDocument');
+var cheerio = require('cheerio');//for scrapper
 var generateEntityArray = require('./generateEntityArray.js');
 var schedule = require('node-schedule');
-var rssParser = require('rss-parser');
 var jsonfile = require('jsonfile');
 var assert = require('assert');
 var fs = require('file-system');
 var mysql = require('mysql');
+
+const stringifyObject = require('stringify-object');
+var sendToDiscovery = discovery_export.sendToDiscovery;
+var getNews = discovery_export.getNews;
+var addDocument = discovery_export.addDocument;
+var updateNewsWithRSS = discovery_export.updateNewsWithRSS;
+var queryNLP_keywords=queryNLP.queryNLP_keywords;
 
 //globle vars 
 var last_query;
@@ -32,34 +31,6 @@ var dbAnswerId;
 var c_score;
 process.env.TZ = 'America/New_York';
 
-var url_dict_arr = [{
-        category: "local",
-        url: 'http://www.starnewsonline.com/news/local?template=rss&mime=xml'
-    },
-    // {
-    //   category: "politics",
-    //   url: 'http://www.starnewsonline.com/news/politics?template=rss&mime=xml' 
-    // },
-    {
-        category: "national-world",
-        url: 'http://www.starnewsonline.com/news/nation-world?template=rss&mime=xml'
-    }, {
-        category: "sports",
-        url: 'http://www.starnewsonline.com/sports?template=rss&mime=xml'
-    },
-    // {
-    //   category: "crime",
-    //   url: 'http://www.starnewsonline.com/news/crime?template=rss&mime=xml' 
-    // },
-
-    {
-        category: "entertainment",
-        url: 'http://www.starnewsonline.com/entertainment?template=rss&mime=xml'
-    }, {
-        category: "lifestyle",
-        url: 'http://www.starnewsonline.com/lifestyle?template=rss&mime=xml'
-    }
-];
 // var postbackFlag=false;
 
 var connection = mysql.createConnection({
@@ -68,6 +39,7 @@ var connection = mysql.createConnection({
     password: process.env.DB_PASSWORD,
     database: process.env.DB
 });
+
 var pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,
@@ -90,8 +62,6 @@ app.use(bodyParser.urlencoded({
     extended: false
 }))
 app.use(bodyParser.json())
-
-
 
 //replace with your credential 
 var conversation = new Conversation({
@@ -123,61 +93,10 @@ var j4 = schedule.scheduleJob("25 * * * *", function(){
   updateNewsWithRSS("entertainment");
 });
 
-var j5 = schedule.scheduleJob("40 * * * *", function(){
+var j5 = schedule.scheduleJob("30 * * * *", function(){
   console.log("Doing scheduled job for lifestyle.");
   updateNewsWithRSS("lifestyle");
 });
-
-// var j = schedule.scheduleJob("*/3 * * * *", function() { //every 5 mins
-//     console.log("Doing scheduled job.");
-//     updateNewsWithRSS("entertainment");
-// });
-
-function parseURL(url, news_cat) {
-    rssParser.parseURL(url, function(err, parsed) {
-        //console.log(parsed.feed.title);
-        var id = 0;
-        parsed.feed.entries.forEach(function(entry) {
-            //console.log(entry.title + ':' + entry.link);
-            //console.log(entry.description);
-            request({
-                method: 'GET',
-                url: entry.link
-            }, function(err, response, body) {
-                if (err) {
-                    console.log(err);
-                } else {
-                	var $ = cheerio.load(body.toString());
-                	// var $ = cheerio.load('<ul class="article-body"><li class="inner">Apple</li><li class="orange">Orange</li><li class="pear">Pear</li></ul>');
-                	var html=$('.article-body').text();
-                	// console.log("html: ",html);
-                    var news_obj = {
-                        "title": entry.title,
-                        "url": entry.link,
-                        "pubDate": entry.pubDate,
-                        "description": entry.content,
-                        "html": html,
-                        "category": news_cat
-                    };
-                    addDocument(news_obj);
-                }
-            });
-
-        });
-    });
-};
-
-function updateNewsWithRSS(target_cat) {
-    url_dict_arr.forEach(function(element) {
-        var category = element.category;
-        var url = element.url;
-        console.log("category: " + category);
-        console.log("url: " + url);
-        if (category == target_cat) {
-            parseURL(url, category);
-        }
-    });
-};
 
 // This code is called only when subscribing the webhook //
 app.get('/webhook/', function(req, res) {
@@ -244,7 +163,6 @@ app.post('/webhook/', function(req, res) {
                     // console.log("2: "+obj(err));
                     res.sendStatus(502);
                 } else {
-                    res.sendStatus(200);
                     var updatedMsg = updateMessage(text, data, sender);
                     updatedMsg.then(function(response) {
                         if (response[0] && response[0] == "list") {
@@ -253,7 +171,7 @@ app.post('/webhook/', function(req, res) {
                         } else if (response.output.text.toString() != "") {
                             sendMessage(sender, response.output.text.toString());
                         }
-                        
+                        res.sendStatus(200);
                     });
                 }
             });
@@ -269,7 +187,7 @@ app.post('/webhook/', function(req, res) {
                 sendMessage(sender, "Thanks for your feedback. I'm looking forward to see your again!");
             } else if (event.postback.payload == "irrelevant") {
                 var relevance = 0;
-                source="";
+                // source="";
                 insertQnA(connection, '0', last_query, 0, sender);
                 sendMessage(sender, "I'm sorry that my answer does not solve your problem. Your feedback will help to improve my answer.");
             } else {
@@ -373,7 +291,7 @@ function updateMessage(input, cv_response, sender) {
                 last_answer = response.answer_txt;
                 last_answer_id = response.id;
                 source = response.source;
-                c_score=parseFloat(response.score/5.0*100).toFixed(2);
+                c_score=parseFloat(response.score/50.0*100).toFixed(2);
                 cv_response.output.text=response.answer_txt;
                 if(c_score<40&&source!="Google"){
                 	 cv_response.output.text +="\n\nI am only "+c_score+"% sure about this answer. Please leave a feedback if it is not what you want.";
@@ -388,7 +306,7 @@ function updateMessage(input, cv_response, sender) {
                 if (last_answer_id != 0) {
                     setTimeout(function() {
                         sendFeedbackButton(sender);
-                    }, 2000);
+                    }, 5000);
                     console.log("Waited 2 seconds.")
                 }
             });
@@ -415,7 +333,6 @@ function updateMessage(input, cv_response, sender) {
         }
     });
 };
-
 
 function sendLocationRequest(sender) {
     var msg_payload = {
@@ -446,7 +363,6 @@ function sendLocationRequest(sender) {
         }
     });
 };
-
 
 function sendFeedbackButton(sender) {
     var button1 = {
@@ -505,12 +421,12 @@ function sendTemplate(sender, title, url) {
             console.log(err);
         } else {
         	var $ = cheerio.load(body.toString());
-        	var image_link=$('.image').children('img').attr('src').toString()||"http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png";
-            if(image_link!="http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png"){
-        	   var cut_idex=image_link.search("&");
-        	   var image_link=image_link.slice(0,cut_idex+1)+"MaxH=500&MaxW=500";
-            }
 
+        	var image_link=($('.image').children('img').attr('src'))||"http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png";
+          if(image_link!="http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png"){
+          	var cut_idex=image_link.search("&");
+          	var image_link=(image_link.slice(0,cut_idex+1)+"MaxH=500&MaxW=500");
+          }
         	// console.log(image_link);
 
         	var element = {
@@ -562,8 +478,7 @@ function sendTemplate(sender, title, url) {
         	});
         	console.log("sendTemplate fbid: " + sender + "---" + "fb messageData: " + "fuck");
         }
-    });
-    
+    });    
 };
 
 function sendTemplateList(sender, news1, news2, news3, news4, news5) {
