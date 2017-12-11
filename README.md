@@ -1,7 +1,22 @@
 
 ### Before you begin
+Please install the following tools you need.
+For linux/mac os x users, it is recommended to install them by the package manager of your linux system.
+For windows users, you can link to following sites and install them by instruction.
+* git https://git-scm.com/download/win
+* python https://www.python.org/ftp/python/3.6.0/python-3.6.0a3-amd64.exe
+  please remember to add python to enviroment path while installing.
+* cloudfoundry-cli https://github.com/cloudfoundry/cli/releases
+* Ensure that you have a [Bluemix account](https://console.ng.bluemix.net/registration/). You can register for a 30 days free-trial.
+* git clone https://github.com/WeijianL1/COMP523-Mr-Reese
 
--  Ensure that you have a [Bluemix account](https://console.ng.bluemix.net/registration/). You can register for a 30 days free-trial. 
+###Facebook messenger API setup
+
+* [Create Facebook fan page](https://www.facebook.com/pages/create) and application
+* Create an messenger app on  [facebook for developers website](https://developers.facebook.com/apps/).
+* Click 'Add Product' -> 'Messenger'. ![fb_1](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/fb_1.png)
+* Generate fan page Token
+   Choose your fanpage at Select a Page, and copy the page access token. Edit the .env and replace the FB_TOKEN token.![fb_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/fb_2.png)
 
 ### Create the services
 
@@ -47,12 +62,12 @@
 
     ![db_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/db_2.jpeg)
 
-* [install cf command](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
+* [install cli command](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
 
 * In your terminal under the root directory of app.js:
 
    ```
-   cf login
+   cf login -a https://api.ng.bluemix.net
    ```
 
 * Type in your IBM username and keywords
@@ -65,5 +80,16 @@
    cf push
    ```
 
-   ​
+### Connect webhook with Bluemix
+* Once the broker app is successfully executed in the cloud, go back to the Facebook developer page to set up the webhook.
+* Callback URL: fill in the broker url (eg. https://yourname-broker.mybluemix.net/webhook)
+* Verification Token: Any non-empty string
+  * Subscription Field:
+  * message_deliveries
+  * message_reads
+  * messages
+  * messaging_optins
+  * message_postbacks  should be checked
+* Select a page to subscribe your webhook to the page events
+
 
