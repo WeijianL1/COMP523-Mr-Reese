@@ -15,7 +15,8 @@ For windows users, you can link to following sites and install them by instructi
 * Create an messenger app on  [facebook for developers website](https://developers.facebook.com/apps/).
 * Click 'Add Product' -> 'Messenger'. ![fb_1](readme_image/fb_1.png)
 * Generate fan page Token
-   Choose your fanpage at Select a Page, and copy the page access token. Edit the .env and replace the FB_TOKEN token.![fb_2](readme_image/fb_2.png)
+   * replicate the .env.example and rename it to .env
+   * Choose your fanpage at Select a Page, and copy the page access token. Edit the .env and replace the FB_TOKEN token.![fb_2](readme_image/fb_2.png)
 
 ### Create the services
 
@@ -47,7 +48,7 @@ For windows users, you can link to following sites and install them by instructi
 
 ###Deploy the server code to Bluemix
 * Fill out the .env file. 
-  * replicate the .env.example and rename it to .env
+
 
   * Conversation:![coversation_2](readme_image/coversation_2.jpeg)
 

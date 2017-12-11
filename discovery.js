@@ -493,6 +493,7 @@ function queryDiscoveryForThree(discovery, environment_id, collection_id, trueQu
 };
 
 module.exports = {
+  updateNewsWithRSS: updateNewsWithRSS,
   sendToDiscovery: sendToDiscovery,
   addDocument: addDocument,
   getNews: getNews
