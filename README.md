@@ -1,4 +1,3 @@
-
 ### Before you begin
 Please install the following tools you need.
 For linux/mac os x users, it is recommended to install them by the package manager of your linux system.
@@ -14,9 +13,9 @@ For windows users, you can link to following sites and install them by instructi
 
 * [Create Facebook fan page](https://www.facebook.com/pages/create) and application
 * Create an messenger app on  [facebook for developers website](https://developers.facebook.com/apps/).
-* Click 'Add Product' -> 'Messenger'. ![fb_1](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/fb_1.png)
+* Click 'Add Product' -> 'Messenger'. ![fb_1](readme_image/fb_1.png)
 * Generate fan page Token
-   Choose your fanpage at Select a Page, and copy the page access token. Edit the .env and replace the FB_TOKEN token.![fb_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/fb_2.png)
+   Choose your fanpage at Select a Page, and copy the page access token. Edit the .env and replace the FB_TOKEN token.![fb_2](readme_image/fb_2.png)
 
 ### Create the services
 
@@ -32,7 +31,7 @@ For windows users, you can link to following sites and install them by instructi
 ###Set Up Conversation
 * Creat a Workspace 
   * ​click on the upload button and choose the conversation_workSpace.json in Data folder
-  * ![coversation_1](/Users/apple/Documents/Git/COMP523-Mr-Reese/ReadMe_image/coversation_1.jpeg)
+  * ![coversation_1](readme_image/coversation_1.jpeg)
 
 ###Set Up Discovery
 * Click on "Launch Tool"
@@ -40,27 +39,27 @@ For windows users, you can link to following sites and install them by instructi
   * First click on "create a data collection"
   * Type you collection name 
   * And then click on "Create"
-  * ![discovery_1](/Users/apple/Documents/Git/COMP523-Mr-Reese/ReadMe_image/discovery_1.jpeg)
+  * ![discovery_1](readme_image/discovery_1.jpeg)
 * Click into the spreadsheet collection
 * Load data into this collection by clicking "Upload Documents"
-* ![discovery_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/ReadMe_image/discovery_2.png)
+* ![discovery_2](readme_image/discovery_2.png)
 
 
 ###Deploy the server code to Bluemix
 * Fill out the .env file. 
   * replicate the .env.example and rename it to .env
 
-  * Conversation:![coversation_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/coversation_2.jpeg)
+  * Conversation:![coversation_2](readme_image/coversation_2.jpeg)
 
-  * Discovery: (for both collections)![discovery_3](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/discovery_3.jpeg)
+  * Discovery: (for both collections)![discovery_3](readme_image/discovery_3.jpeg)
 
-  * Weather: ![weather](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/weather.jpeg)
+  * Weather: ![weather](readme_image/weather.jpeg)
 
-  * NLP: ![nlp](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/nlp.jpeg)
+  * NLP: ![nlp](readme_image/nlp.jpeg)
 
-  * MySQL: ![db_1](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/db_1.jpeg)
+  * MySQL: ![db_1](readme_image/db_1.jpeg)
 
-    ![db_2](/Users/apple/Documents/Git/COMP523-Mr-Reese/readme_image/db_2.jpeg)
+    ![db_2](readme_image/db_2.jpeg)
 
 * [install cli command](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
 
@@ -91,5 +90,4 @@ For windows users, you can link to following sites and install them by instructi
   * messaging_optins
   * message_postbacks  should be checked
 * Select a page to subscribe your webhook to the page events
-
 
