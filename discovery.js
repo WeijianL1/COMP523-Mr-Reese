@@ -1,5 +1,6 @@
 const stringifyObject = require('stringify-object');
 //var dateFormat = require('dateformat');
+var request = require('request');
 var queryNLP=require('./queryNLP');
 var queryNLP_url=queryNLP.queryNLP_url;
 var queryNLP_text=queryNLP.queryNLP_text;
