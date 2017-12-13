@@ -92,3 +92,7 @@ For windows users, you can link to following sites and install them by instructi
   * message_postbacks  should be checked
 * Select a page to subscribe your webhook to the page events
 
+### Reference 
+* https://github.com/YuanYuYuan/Bluemix-tutorial
+* https://github.com/watson-developer-cloud/node-sdk
+* https://github.com/desmarchris/docs-bot​

@@ -319,7 +319,7 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
     score: news_score
   };
   var spreadsheet_payload={
-    answer_txt: spreadsheet_title+'\n'+spreadsheet_text,
+    answer_txt: spreadsheet_text,
     id:   spreadsheet_id,
     source:   "Spreadsheet",
     title:  null,
@@ -352,12 +352,14 @@ function resolve_results(query, news_score, news_title, news_url, news_id, sprea
     };
     return(google_payload);
   }
-  else if (news_score > 15) {
+    else if (news_score > 19) {
     return(news_payload);
   } 
   else if (spreadsheet_score > 20) {
     return(spreadsheet_payload);
   }
+
+
   
   // From now on, either news_score >= 0.5 or spreadsheet_score >= 1.0/
   else if (news_score > spreadsheet_score / 2) {

@@ -485,7 +485,7 @@ function sendTemplateList(sender, news1, news2, news3, news4, news5) {
     var img_url = "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png";
     var element1 = {
         title: news1.title,
-        image_url: img_url,
+        // image_url: img_url,
         subtitle: news1.description,
         default_action: {
             type: "web_url",
