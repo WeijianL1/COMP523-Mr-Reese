@@ -524,7 +524,7 @@ function sendTemplateList(sender, news1, news2, news3, news4, news5) {
     var element5 = makeElement(news5);
     var payloadData = {
         template_type: "list",
-        top_element_style: "large",
+        top_element_style: "compact",
         elements: [element1, element2, element3, element4]
     };
     var attachmentData = {
