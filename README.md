@@ -9,7 +9,7 @@ For windows users, you can link to following sites and install them by instructi
 * Ensure that you have a [Bluemix account](https://console.ng.bluemix.net/registration/). You can register for a 30 days free-trial.
 * git clone https://github.com/WeijianL1/COMP523-Mr-Reese
 
-###Facebook messenger API setup
+### Facebook messenger API setup
 
 * [Create Facebook fan page](https://www.facebook.com/pages/create) and application
 * Create an messenger app on  [facebook for developers website](https://developers.facebook.com/apps/).
@@ -29,12 +29,12 @@ For windows users, you can link to following sites and install them by instructi
 4. In Bluemix, [create a ClearDB Managed MySQL instance](https://console.bluemix.net/catalog/services/cleardb-managed-mysql-database)
 5. In Bluemix, create a Weather Company Data instance
 
-###Set Up Conversation
+### Set Up Conversation
 * Creat a Workspace 
   * ​click on the upload button and choose the conversation_workSpace.json in Data folder
   * ![coversation_1](image/coversation_1.jpeg)
 
-###Set Up Discovery
+### Set Up Discovery
 * Click on "Launch Tool"
 * Create two new collections (one for spreadsheet and another for news feed)
   * First click on "create a data collection"
@@ -46,7 +46,7 @@ For windows users, you can link to following sites and install them by instructi
 * ![discovery_2](image/discovery_2.png)
 
 
-###Deploy the server code to Bluemix
+### Deploy the server code to Bluemix
 * Fill out the .env file. 
 
 
