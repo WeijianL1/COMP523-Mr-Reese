@@ -145,11 +145,10 @@ function sendToDiscovery(query, type, ret_mult_temp) {
     var collection_id = process.env.COLLECTION_ID;
     var news_collection_id = process.env.NEWS_COLLECTION_ID;
     // var latest_news_collection_id = process.env.LATEST_NEWS_COLLECTION_ID;
-    var trueQuery;
     // if(type=='title'){
     //   trueQuery="title:"+query; //only question natural language in title field
     // }
-    trueQuery = query;
+    var trueQuery = query.replace(/"/g, "'");
     var news_score = 0;
     var news_title;
     var news_url;
@@ -241,7 +240,8 @@ function _getNewsOfCat(discovery, environment_id, collection_id, category) {
   console.log("getNewsOfCat called with category: " + category);
   return new Promise(function(resolve, reject) {
     var now = new Date();
-    var day_off=1;
+    var day_off = 1;
+    now.setDate(now.getDate() - day_off);
     var date_str = now.toGMTString().substring(0, 16);
     console.log("date_str: " + date_str);
     //news_arr = new Array(3);
@@ -268,7 +268,10 @@ function _queryDiscovery(discovery, environment_id, collection_id, query, source
   //trueQuery = trueQuery.replace(/:/g, ",");
   //trueQuery = trueQuery.replace(/(?<=\d),(?=\d)/g, "");
   //trueQuery = trueQuery.replace(/""/g, " ");
-  trueQuery = query.replace(/"/g, "'");
+
+  // Do not substitute quotation mark, as this will break non natural-language queries.
+  //trueQuery = query.replace(/"/g, "'");
+  trueQuery = query;
   console.log("trueQuery: " + trueQuery);
   return new Promise(function(resolve, reject) {
     discovery.query({
@@ -280,29 +283,29 @@ function _queryDiscovery(discovery, environment_id, collection_id, query, source
       resolve(_makeDummyObj(source));
       //resolve([0, null, null, null, null]);
       } else {
-      if (typeof data.results[0] == 'undefined') {
-        console.log("Query returns no results.");
-        // var score = 0;
-        // var title = null;
-        // var url_or_text = null;
-        // var id = null;
-        // var pubDate = null;
-        resolve(_makeDummyObj(source));
-      } 
-      else {
-        // var score = data.results[0].score;
-        // var title = data.results[0].title;
-        // if (source) {
-        //   var url_or_text = data.results[0].url;
-        // } else {
-        //   var url_or_text = data.results[0].text;
-        // }
-        // var id = data.results[0].id;
-        // var pubDate = data.results[0].pubDate;
-        console.log("Found results in news or spreadsheet: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
-        resolve(_makeObj(data.results[0], source));
-        //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
-      }
+        if (typeof data.results[0] == 'undefined') {
+          console.log("Query returns no results.");
+          // var score = 0;
+          // var title = null;
+          // var url_or_text = null;
+          // var id = null;
+          // var pubDate = null;
+          resolve(_makeDummyObj(source));
+        } 
+        else {
+          // var score = data.results[0].score;
+          // var title = data.results[0].title;
+          // if (source) {
+          //   var url_or_text = data.results[0].url;
+          // } else {
+          //   var url_or_text = data.results[0].text;
+          // }
+          // var id = data.results[0].id;
+          // var pubDate = data.results[0].pubDate;
+          console.log("Found results in news or spreadsheet: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
+          resolve(_makeObj(data.results[0], source));
+          //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
+        }
       //resolve([score, title, url_or_text, id, pubDate]);
       }
     });   

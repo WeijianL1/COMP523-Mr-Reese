@@ -165,8 +165,8 @@ app.post('/webhook/', function(req, res) {
 					var updatedMsg = updateMessage(text, data, sender);
 					updatedMsg.then(function(response) {
 						if (response[0] && response[0] == "list") {
+							//sendMessage(sender, response[1].title);
 							sendTemplateList(sender, response[1], response[2], response[3], response[4], response[5]);
-							//sendMessage(sender, "fuck");
 						} else if (response.output.text.toString() != "") {
 							sendMessage(sender, response.output.text.toString());
 						}
