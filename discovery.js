@@ -100,6 +100,9 @@ function addDocument(json_obj) {
     // Delete the previous article from discovery.
     if (news_score > 15) {
       console.log("Found similar news." + json_obj.title);
+      if (news_url == json_obj.url){
+        return;
+      }
       if (news_url != json_obj.url) {
         console.log("Found outdated url. Delete old news and add new one.");
         discovery.deleteDocument(
