@@ -6,6 +6,7 @@ var queryNLP_url=queryNLP.queryNLP_url;
 var queryNLP_text=queryNLP.queryNLP_text;
 var rssParser = require('rss-parser');
 var cheerio = require('cheerio');//for scrapper
+var num_NewsToReturn = 4;
 
 var url_dict_arr = [
   {
@@ -87,8 +88,8 @@ function addDocument(json_obj) {
     collection_id: process.env.NEWS_COLLECTION_ID,
     file: json_obj
   };
-  //trueQuery = trueQuery.replace(/""/g, " ");
-  trueQuery = 'title:"' + json_obj.title.replace(/"/g, "'") + '",category::"' + json_obj.category + '"';
+  //trueQuery = 'title:"' + json_obj.title.replace(/"/g, "'") + '",category::"' + json_obj.category + '"';
+  trueQuery = 'title:"' + json_obj.title.replace(/"/g, "'") + '"';
   var news_title_response = _queryDiscovery(discovery, process.env.ENVIRONMENT_ID, process.env.NEWS_COLLECTION_ID, trueQuery, "Star News");
   news_title_response.then(function(response) {
     console.log("query news returned.");
@@ -98,7 +99,7 @@ function addDocument(json_obj) {
     news_id = response.id;
 
     // Delete the previous article from discovery.
-    if (news_score > 15) {
+    if (news_score > 30) {
       console.log("Found similar news." + json_obj.title);
       if (news_url == json_obj.url){
         return;
@@ -163,7 +164,7 @@ function sendToDiscovery(query, type, ret_mult_temp) {
     var qna_id;
 
     if (ret_mult_temp == true) {  // return three responses to user.
-      var news_response = _queryDiscoveryForThree(discovery, environment_id, news_collection_id, trueQuery);
+      var news_response = _queryDiscoveryForX(discovery, environment_id, news_collection_id, trueQuery, 3);
       news_response.then(function(response) {
         resolve(_resolve_results(query, response))
       });
@@ -235,6 +236,52 @@ function getNews() {
           });
         });
       });
+    });
+  });
+};
+
+function getNewsOfCat(category) {
+  return new Promise(function(resolve, reject) {
+    var DiscoveryV1 = require('watson-developer-cloud/discovery/v1');
+    var discovery = new DiscoveryV1({
+      username: process.env.DISCOVERY_USERNAME,
+      password: process.env.DISCOVERY_PASSWORD,
+      version_date: '2017-06-25'
+    });
+    var environment_id = process.env.ENVIRONMENT_ID;
+    var news_collection_id = process.env.NEWS_COLLECTION_ID;
+    var news_arr = new Array(num_NewsToReturn);
+    var now = new Date();
+    var day_off = 1;
+    var date_str = now.toGMTString().substring(0, 16);
+    console.log("date_str: " + date_str);
+    //news_arr = new Array(3);
+    //var response_today = _queryDiscoveryForThree(discovery, environment_id, news_collection_id, date_str);
+    var trueQuery = 'pubDate:"' + date_str + '",category::"' + category + '"'; 
+    var response_today = _queryDiscoveryForX(discovery, environment_id, news_collection_id, trueQuery, num_NewsToReturn);
+    response_today.then(function(response) {
+      var i = 0;
+      for (; i<num_NewsToReturn; i++) {
+        if (response[i].score < 1.0) {
+          break;
+        } else {
+          news_arr[i] = response[i];
+        }
+      }
+      if (i < num_NewsToReturn) {
+        now.setDate(now.getDate() - day_off);
+        date_str = now.toGMTString().substring(0, 16);
+        var trueQuery = 'pubDate:"' + date_str + '",category::"' + category + '"'; 
+        var response_yesterday = _queryDiscoveryForX(discovery, environment_id, news_collection_id, trueQuery, num_NewsToReturn - i);
+        response_yesterday.then(function(response) {
+          for (j=0; j<num_NewsToReturn-i; j++) {
+            news_arr[i+j] = response[j];
+          }
+          resolve(news_arr);
+        });
+      } else {
+        resolve(news_arr);
+      }
     });
   });
 };
@@ -470,8 +517,8 @@ var _makeDummyObj = function(source){
   return res;
 };
 
-function _queryDiscoveryForThree(discovery, environment_id, collection_id, trueQuery) {//deprecated
-  trueQuery = trueQuery.replace(/:/g, ",");
+function _queryDiscoveryForX(discovery, environment_id, collection_id, trueQuery, x) {//deprecated
+  //trueQuery = trueQuery.replace(/:/g, ",");
   //trueQuery = trueQuery.replace(/(?<=\d),(?=\d)/g, "");
   //trueQuery = trueQuery.replace(/""/g, " ");
   console.log("trueQuery: " + trueQuery);
@@ -482,54 +529,64 @@ function _queryDiscoveryForThree(discovery, environment_id, collection_id, trueQ
       query: trueQuery // only querying the text field
     }, function(error, data) {
       if (error) {
-        var obj_1 = _makeDummyObj("Star News");
-        var obj_2 = _makeDummyObj("Star News");
-        var obj_3 = _makeDummyObj("Star News");
-        resolve([obj_1, obj_2, obj_3]);
-        //resolve([0, null, null, null, null]);
+        var objs = new Array(x);
+        for (var i=0; i<x;i++) {
+          objs[i] = _makeDummyObj("Star News");
+        }
+        // var obj_1 = _makeDummyObj("Star News");
+        // var obj_2 = _makeDummyObj("Star News");
+        // var obj_3 = _makeDummyObj("Star News");
+        // var obj_4 = _makeDummyObj("Star News");
+        // resolve([obj_1, obj_2, obj_3, obj_4]);
+        resolve(objs);
       } else {
-      if (typeof data.results[0] == 'undefined') {
-        console.log("Query returns no results.");
-        // var score = 0;
-        // var title = null;
-        // var url_or_text = null;
-        // var id = null;
-        // var pubDate = null;
-        var objs = new Array(3);
-        var obj_1 = _makeDummyObj("Star News");
-        var obj_2 = _makeDummyObj("Star News");
-        var obj_3 = _makeDummyObj("Star News");
-        objs[0] = obj_1;
-        objs[1] = obj_2;
-        objs[2] = obj_3;
-      } 
-      else {
-        // var score = data.results[0].score;
-        // var title = data.results[0].title;
-        // if (is_news) {
-        //   var url_or_text = data.results[0].url;
-        // } else {
-        //   var url_or_text = data.results[0].text;
-        // }
-        // var id = data.results[0].id;
-        // var pubDate = data.results[0].pubDate;
-        var objs = new Array(3);
-        for (var i=0; i<3;i++) {
-          if (typeof data.results[i] == 'undefined') {
+        if (typeof data.results[0] == 'undefined') {
+          console.log("Query returns no results.");
+          // var score = 0;
+          // var title = null;
+          // var url_or_text = null;
+          // var id = null;
+          // var pubDate = null;
+          var objs = new Array(x);
+          for (var i=0; i<x;i++) {
             objs[i] = _makeDummyObj("Star News");
           }
-          else {
-            objs[i] = _makeObj(data.results[i], "Star News");
+          // var obj_1 = _makeDummyObj("Star News");
+          // var obj_2 = _makeDummyObj("Star News");
+          // var obj_3 = _makeDummyObj("Star News");
+          // var obj_4 = _makeDummyObj("Star News");
+          // objs[0] = obj_1;
+          // objs[1] = obj_2;
+          // objs[2] = obj_3;
+          // objs[3] = obj_4;
+        } 
+        else {
+          // var score = data.results[0].score;
+          // var title = data.results[0].title;
+          // if (is_news) {
+          //   var url_or_text = data.results[0].url;
+          // } else {
+          //   var url_or_text = data.results[0].text;
+          // }
+          // var id = data.results[0].id;
+          // var pubDate = data.results[0].pubDate;
+          var objs = new Array(x);
+          for (var i=0; i<x; i++) {
+            if (typeof data.results[i] == 'undefined') {
+              objs[i] = _makeDummyObj("Star News");
+            }
+            else {
+              objs[i] = _makeObj(data.results[i], "Star News");
+            }
           }
+          // var obj_1 = _makeObj(data.results[0]);
+          // var obj_2 = _makeDummyObj();
+          // var obj_3 = _makeDummyObj();
+          //var obj_2 = _makeObj(data.results[1]);
+          //var obj_3 = _makeObj(data.results[2]);
+          console.log("Found results in news: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
+          //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
         }
-        // var obj_1 = _makeObj(data.results[0]);
-        // var obj_2 = _makeDummyObj();
-        // var obj_3 = _makeDummyObj();
-        //var obj_2 = _makeObj(data.results[1]);
-        //var obj_3 = _makeObj(data.results[2]);
-        console.log("Found results in news: "+[data.results[0].title, data.results[0].text, data.results[0].score]);
-        //resolve(["This is what I found for you." + '\n' + data.results[0].title + '\n' + data.results[0].url, data.results[0].id]);
-      }
         resolve(objs);
       }
     });   
@@ -561,5 +618,6 @@ module.exports = {
   updateNewsWithRSS: updateNewsWithRSS,
   sendToDiscovery: sendToDiscovery,
   addDocument: addDocument,
-  getNews: getNews
+  getNews: getNews,
+  getNewsOfCat: getNewsOfCat
 }

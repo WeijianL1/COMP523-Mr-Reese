@@ -16,6 +16,7 @@ var mysql = require('mysql');
 const stringifyObject = require('stringify-object');
 var sendToDiscovery = discovery_export.sendToDiscovery;
 var getNews = discovery_export.getNews;
+var getNewsOfCat = discovery_export.getNewsOfCat;
 var addDocument = discovery_export.addDocument;
 var updateNewsWithRSS = discovery_export.updateNewsWithRSS;
 var queryNLP_keywords=queryNLP.queryNLP_keywords;
@@ -168,7 +169,7 @@ app.post('/webhook/', function(req, res) {
 					updatedMsg.then(function(response) {
 						if (response[0] && response[0] == "list") {
 							//sendMessage(sender, response[1].title);
-							sendTemplateList(sender, response[1], response[2], response[3], response[4], response[5]);
+							sendTemplateList(sender, response[1], response[2], response[3], response[4]);
 						} else if (response.output.text.toString() != "") {
 							sendMessage(sender, response.output.text.toString());
 						}
@@ -182,59 +183,67 @@ app.post('/webhook/', function(req, res) {
 		} else if (event.postback && event.postback.payload) {
 			// postbackFlag=false;
 			console.log("Getting postback from webhook.");
-			if (event.postback.payload == "relevant") {
-				var relevance = 10;
-				insertQnA(connection, last_answer, last_query, 1, sender);
-				sendMessage(sender, "Thanks for your feedback. I'm looking forward to see your again!");
-			} else if (event.postback.payload == "irrelevant") {
-				var relevance = 0;
-				// source="";
-				insertQnA(connection, '0', last_query, 0, sender);
-				sendMessage(sender, "I'm sorry that my answer does not solve your problem. Your feedback will help to improve my answer.");
-			} else {
-				console.log("payload value not recognized.");
-			}
-
-			var example = {
-				document_id: last_answer_id,
-				relevance: relevance
-			};
-
-			var examples = [];
-			examples.push(example);
-
-			var dataString = {
-				natural_language_query: last_query,
-				examples: examples
-			};
-			if (source == "Star News") {
-				var url = 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID + '/collections/' + process.env.NEWS_COLLECTION_ID + '/training_data?version=2017-09-01';
-			} else if (source == "Spreadsheet") {
-				var url = 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID + '/collections/' + process.env.COLLECTION_ID + '/training_data?version=2017-09-01';
-			} else {
-				console.log("source should never be google!");
-				// assert.equal(source, "Google");
-				// assert.equal(1, 0);
-			}
-			var options = {
-				url: url,
-				method: 'POST',
-				json: true,
-				body: dataString,
-				auth: {
-					'user': process.env.DISCOVERY_USERNAME,
-					'pass': process.env.DISCOVERY_PASSWORD
+			if (event.postback.payload == "relevant" || event.postback.payload == "irrelevant") {
+				if (event.postback.payload == "relevant") {
+					var relevance = 10;
+					insertQnA(connection, last_answer, last_query, 1, sender);
+					sendMessage(sender, "Thanks for your feedback. I'm looking forward to see your again!");
+				} else if (event.postback.payload == "irrelevant") {
+					var relevance = 0;
+					// source="";
+					insertQnA(connection, '0', last_query, 0, sender);
+					sendMessage(sender, "I'm sorry that my answer does not solve your problem. Your feedback will help to improve my answer.");
+				} else {
+					console.log("payload value not recognized.");
 				}
-			};
-			function callback(error, response, body) {
-				if (!error && response.statusCode == 200) {
-					console.log(body);
-				} else if (error) {
-					console.log("Error: " + error);
+				var example = {
+					document_id: last_answer_id,
+					relevance: relevance
+				};
+
+				var examples = [];
+				examples.push(example);
+
+				var dataString = {
+					natural_language_query: last_query,
+					examples: examples
+				};
+				if (source == "Star News") {
+					var url = 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID + '/collections/' + process.env.NEWS_COLLECTION_ID + '/training_data?version=2017-09-01';
+				} else if (source == "Spreadsheet") {
+					var url = 'https://gateway.watsonplatform.net/discovery/api/v1/environments/' + process.env.ENVIRONMENT_ID + '/collections/' + process.env.COLLECTION_ID + '/training_data?version=2017-09-01';
+				} else {
+					console.log("source should never be google!");
+					// assert.equal(source, "Google");
+					// assert.equal(1, 0);
 				}
+				var options = {
+					url: url,
+					method: 'POST',
+					json: true,
+					body: dataString,
+					auth: {
+						'user': process.env.DISCOVERY_USERNAME,
+						'pass': process.env.DISCOVERY_PASSWORD
+					}
+				};
+				function callback(error, response, body) {
+					if (!error && response.statusCode == 200) {
+						console.log(body);
+					} else if (error) {
+						console.log("Error: " + error);
+					}
+				}
+				request(options, callback);
+				console.log("sent feedback to discovery.");
+			} else {
+				responseChunck = getNewsOfCat(event.postback.payload);
+				responseChunck.then(function(response) {
+					console.log("getNewsOfCat returned.");
+					//cv_response.output.text = "skip";
+					sendTemplateList(sender, response[0], response[1], response[2], response[3]);
+				});
 			}
-			request(options, callback);
-			console.log("sent feedback to discovery.");
 			res.sendStatus(200);
 		}
 	}
@@ -507,7 +516,7 @@ function sendTemplate(sender, news_list) {
 });
 };
 
-function sendTemplateList(sender, news1, news2, news3, news4, news5) {
+function sendTemplateList(sender, news1, news2, news3, news4) {
 	var img_url = "http://www.starnewsonline.com/Global/images/head/nameplate/starnewsonline_logo.png";
 	var element1 = {
 		title: news1.title,
@@ -520,8 +529,8 @@ function sendTemplateList(sender, news1, news2, news3, news4, news5) {
 			webview_height_ratio: "tall"
 		},
 		buttons: [{
-			type: "web_url",
-			url: news1.url,
+			type: "postback",
+			payload: news1.category,
 			title: news1.category
 		}]
 	};
@@ -537,8 +546,8 @@ function sendTemplateList(sender, news1, news2, news3, news4, news5) {
 				webview_height_ratio: "tall"
 			},
 			buttons: [{
-				type: "web_url",
-				url: news.url,
+				type: "postback",
+				payload: news.category,
 				title: news.category
 			}]
 		};
@@ -547,7 +556,6 @@ function sendTemplateList(sender, news1, news2, news3, news4, news5) {
 	var element2 = makeElement(news2);
 	var element3 = makeElement(news3);
 	var element4 = makeElement(news4);
-	var element5 = makeElement(news5);
 	var payloadData = {
 		template_type: "list",
 		top_element_style: "compact",
