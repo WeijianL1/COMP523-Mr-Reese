@@ -99,7 +99,7 @@ function addDocument(json_obj) {
     news_id = response.id;
 
     // Delete the previous article from discovery.
-    if (news_score > 30) {
+    if (news_score > 20) {
       console.log("Found similar news." + json_obj.title);
       if (news_url == json_obj.url){
         return;

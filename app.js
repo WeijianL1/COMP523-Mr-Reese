@@ -6,7 +6,7 @@ var Conversation = require('watson-developer-cloud/conversation/v1'); // watson 
 var discovery_export = require('./discovery');
 var queryNLP=require('./queryNLP');
 var getWeather = require('./weather');
-var cheerio = require('cheerio');//for scrapper
+var cheerio = require('cheerio'); //for scrapper
 var schedule = require('node-schedule');
 var jsonfile = require('jsonfile');
 var assert = require('assert');
@@ -29,6 +29,7 @@ var source;
 var dbAnswerId;
 var c_score;
 var ret_mult_temp = true;
+var context = {}
 process.env.TZ = 'America/New_York';
 
 // var postbackFlag=false;
@@ -73,30 +74,34 @@ var conversation = new Conversation({
 	version_date: Conversation.VERSION_DATE_2017_04_21
 });
 
-var j1 = schedule.scheduleJob("20 * * * *", function(){
+var j1 = schedule.scheduleJob("0 * * * *", function(){
   console.log("Doing scheduled job for local.");
   updateNewsWithRSS("local");
 });
 
-var j2 = schedule.scheduleJob("35 * * * *", function(){
+var j2 = schedule.scheduleJob("5 * * * *", function(){
   console.log("Doing scheduled job for national.");
   updateNewsWithRSS("national-world");
 });
 
-var j3 = schedule.scheduleJob("30 * * * *", function(){
+var j3 = schedule.scheduleJob("10 * * * *", function(){
   console.log("Doing scheduled job for sports.");
   updateNewsWithRSS("sports");
 });
 
-var j4 = schedule.scheduleJob("25 * * * *", function(){
+var j4 = schedule.scheduleJob("15 * * * *", function(){
   console.log("Doing scheduled job for entertainment.");
   updateNewsWithRSS("entertainment");
 });
 
-var j5 = schedule.scheduleJob("30 * * * *", function(){
+var j5 = schedule.scheduleJob("20 * * * *", function(){
   console.log("Doing scheduled job for lifestyle.");
   updateNewsWithRSS("lifestyle");
 });
+
+// function parseURL(user_id, lat, long) {
+// 	if user_id
+// }
 
 // This code is called only when subscribing the webhook //
 app.get('/webhook/', function(req, res) {
@@ -132,7 +137,7 @@ app.post('/webhook/', function(req, res) {
 			var lat = event.message.attachments[0].payload.coordinates.lat;
 			var long = event.message.attachments[0].payload.coordinates.long;
 			console.log("lat: ", lat, "long: ", long);
-
+      //storeUserLocation(sender, lat, long);
 			var responseChunck = getWeather(lat, long);
 			responseChunck.then(function(response) {
 				var weather_text = response[0];
@@ -168,7 +173,7 @@ app.post('/webhook/', function(req, res) {
 					var updatedMsg = updateMessage(text, data, sender);
 					updatedMsg.then(function(response) {
 						if (response[0] && response[0] == "list") {
-							//sendMessage(sender, response[1].title);
+							sendMessage(sender, "Here are today's headlines from StarNews. You can click on the blue buttons to get more news in that category.");
 							sendTemplateList(sender, response[1], response[2], response[3], response[4]);
 						} else if (response.output.text.toString() != "") {
 							sendMessage(sender, response.output.text.toString());
@@ -241,6 +246,7 @@ app.post('/webhook/', function(req, res) {
 				responseChunck.then(function(response) {
 					console.log("getNewsOfCat returned.");
 					//cv_response.output.text = "skip";
+					sendMessage(sender, "More news on " + event.postback.payload + ":");
 					sendTemplateList(sender, response[0], response[1], response[2], response[3]);
 				});
 			}
@@ -511,9 +517,11 @@ function sendTemplate(sender, news_list) {
 						  });
 						  console.log("sendTemplate fbid: " + sender + "---" + "fb messageData: " + "fuck");
 						}
-	});}
-	});}
-});
+					});
+				}
+			});
+		}
+	});
 };
 
 function sendTemplateList(sender, news1, news2, news3, news4) {
