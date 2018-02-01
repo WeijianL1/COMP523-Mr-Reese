@@ -29,7 +29,7 @@ var source;
 var dbAnswerId;
 var c_score;
 var ret_mult_temp = true;
-var context = {}
+var user_dict = {}
 process.env.TZ = 'America/New_York';
 
 // var postbackFlag=false;
@@ -99,9 +99,16 @@ var j5 = schedule.scheduleJob("20 * * * *", function(){
   updateNewsWithRSS("lifestyle");
 });
 
-// function parseURL(user_id, lat, long) {
-// 	if user_id
-// }
+function storeUserLocation(user_id, latitude, longitude) {
+	var now = new Date();
+	user_dict[user_id] = {lat:latitude, long:longitude, time:now.getTime()};
+	// if (user_id in user_dict) {
+
+	// } else {
+	// 	var now = new Date();
+	// 	user_dict[user_id] = {lat:latitude, long:longitude, time:now.getTime()};
+	// }
+}
 
 // This code is called only when subscribing the webhook //
 app.get('/webhook/', function(req, res) {
@@ -137,7 +144,7 @@ app.post('/webhook/', function(req, res) {
 			var lat = event.message.attachments[0].payload.coordinates.lat;
 			var long = event.message.attachments[0].payload.coordinates.long;
 			console.log("lat: ", lat, "long: ", long);
-      //storeUserLocation(sender, lat, long);
+      storeUserLocation(sender, lat, long);
 			var responseChunck = getWeather(lat, long);
 			responseChunck.then(function(response) {
 				var weather_text = response[0];
@@ -148,9 +155,7 @@ app.post('/webhook/', function(req, res) {
 			var attachment_failure = "Sorry, I cannot handle that yet.";
 			sendMessage(sender, attachment_failure);
 			res.sendStatus(200);
-		} 
-
-		else if (event.message && event.message.text) {
+		} else if (event.message && event.message.text) {
 			text = event.message.text;
 			text = text.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ');
 			var inputObj = {
@@ -334,9 +339,34 @@ function updateMessage(input, cv_response, sender) {
 		  resolve(cv_response);
 		} 
 		else if (intent == 'weather') {
-			sendLocationRequest(sender);
-			cv_response.output.text = ""; //set text to empty, so that it wont go thru send message
-			resolve(cv_response);
+			if (sender in user_dict) {
+				var now = new Date();
+				if (now.getTime() - user_dict[sender].time > 60000){
+					sendLocationRequest(sender);
+					cv_response.output.text = ""; //set text to empty, so that it wont go thru send message
+					resolve(cv_response);
+				} else {
+					var lat = user_dict[sender].lat;
+					var long = user_dict[sender].long;
+					console.log("lat: ", lat, "long: ", long);
+					var responseChunck = getWeather(lat, long);
+					responseChunck.then(function(response) {
+						var weather_text = response[0];
+						cv_response.output.text = weather_text;
+						resolve(cv_response);
+					});
+				}
+			} else {
+				sendLocationRequest(sender);
+				cv_response.output.text = ""; //set text to empty, so that it wont go thru send message
+				var entities = cv_response.entities;
+				for (i=0; i<entities.length; i++) {
+					if (entities[i].entity == 'sys-location'){
+						cv_response.output.text = entities[i].value.toString();
+					}
+				}
+				resolve(cv_response);
+			}
 		} else if (intent == 'news') {
 			console.log("detect news intent.");
 			responseChunck = getNews();

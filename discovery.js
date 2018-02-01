@@ -97,31 +97,27 @@ function addDocument(json_obj) {
     news_pubDate = response.pubDate;
     news_url = response.url;
     news_id = response.id;
+    news_title = response.title;
 
-    // Delete the previous article from discovery.
-    if (news_score > 20) {
-      console.log("Found similar news." + json_obj.title);
-      if (news_url == json_obj.url){
-        return;
-      }
-      if (news_url != json_obj.url) {
-        console.log("Found outdated url. Delete old news and add new one.");
-        discovery.deleteDocument(
-          {environment_id: process.env.ENVIRONMENT_ID, collection_id: process.env.NEWS_COLLECTION_ID, document_id: news_id}, 
-          function(error, data) {
-            console.log("JSON.stringify(data, null, 2)");
-            console.log("Can't delete news from discovery.")
-          }
-        );
-        console.log("Adding news_obj with updated url: " + json_obj.title + ", score = " + news_score);
-        discovery.addJsonDocument(document_obj, function(error, data) {
-          if (error) {
-            console.error(error);
-            return;
-          }
-          console.log(data);
-        });
-      } 
+    if (news_url == json_obj.url) {
+      return;
+    } else if (news_score > 20 && news_title == json_obj.title) {
+      console.log("Found outdated url. Delete old news and add new one.");
+      discovery.deleteDocument(
+        {environment_id: process.env.ENVIRONMENT_ID, collection_id: process.env.NEWS_COLLECTION_ID, document_id: news_id}, 
+        function(error, data) {
+          console.log("JSON.stringify(data, null, 2)");
+          console.log("Can't delete news from discovery.")
+        }
+      );
+      console.log("Adding news_obj with updated url: " + json_obj.title + ", score = " + news_score);
+      discovery.addJsonDocument(document_obj, function(error, data) {
+        if (error) {
+          console.error(error);
+          return;
+        }
+        console.log(data);
+      });
     } else {
       console.log("Adding new json: " + json_obj.title + ", score = " + news_score);
       discovery.addJsonDocument(document_obj, function(error, data) {
@@ -132,6 +128,44 @@ function addDocument(json_obj) {
         console.log(data);
       });
     }
+
+    // Delete the previous article from discovery.
+    // if (news_score > 20) {
+    //   console.log("Found similar news." + json_obj.title);
+    //   if (news_url == json_obj.url) {
+    //     return;
+    //   }
+    //   if (news_url != json_obj.url) {
+    //     console.log("Found outdated url. Delete old news and add new one.");
+    //     discovery.deleteDocument(
+    //       {environment_id: process.env.ENVIRONMENT_ID, collection_id: process.env.NEWS_COLLECTION_ID, document_id: news_id}, 
+    //       function(error, data) {
+    //         console.log("JSON.stringify(data, null, 2)");
+    //         console.log("Can't delete news from discovery.")
+    //       }
+    //     );
+    //     console.log("Adding news_obj with updated url: " + json_obj.title + ", score = " + news_score);
+    //     discovery.addJsonDocument(document_obj, function(error, data) {
+    //       if (error) {
+    //         console.error(error);
+    //         return;
+    //       }
+    //       console.log(data);
+    //     });
+    //   } 
+    // } else {
+    //   if (news_url == json_obj.url) {
+    //     return;
+    //   }
+    //   console.log("Adding new json: " + json_obj.title + ", score = " + news_score);
+    //   discovery.addJsonDocument(document_obj, function(error, data) {
+    //     if (error) {
+    //       console.error(error);
+    //       return;
+    //     }
+    //     console.log(data);
+    //   });
+    // }
     
   });
 };
